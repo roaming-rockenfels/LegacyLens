@@ -1,0 +1,32 @@
+flowchart TD
+    subgraph Ingestion["Ingestion Pipeline (Local CLI)"]
+        A[LAPACK Source Files<br/>.f / .f90] --> B[File Discovery<br/>Filter by extension]
+        B --> C[Fortran Chunker<br/>Regex parser]
+        C --> D[Metadata Extraction<br/>name, calls, params, purpose]
+        D --> E[NL Summary Enrichment<br/>Prepend purpose line]
+        E --> F[Voyage Code 2<br/>1536-dim embeddings]
+        F --> G[(Pinecone<br/>Vector DB)]
+    end
+
+    subgraph Query["Query Pipeline (Fly.io + CLI)"]
+        H[User Query<br/>CLI or Swagger UI] --> I[Voyage Code 2<br/>Query embedding]
+        I --> J[(Pinecone<br/>Top-k search)]
+        J --> K[Context Assembly<br/>Chunks + metadata]
+        K --> L[Claude Haiku 4.5<br/>Answer generation]
+        L --> M[Streamed Response<br/>Code + explanation + refs]
+    end
+
+    subgraph Features["Code Understanding Features"]
+        N[explain] --> K
+        O[deps] --> K
+        P[docgen] --> K
+        Q[logic] --> K
+    end
+
+    subgraph Pluggable["Pluggable Chunker Interface"]
+        R[BaseChunker ABC]
+        R --> S[FortranChunker<br/>SUBROUTINE/FUNCTION]
+        R -.-> T[COBOLChunker<br/>PARAGRAPH/SECTION<br/>future]
+    end
+
+    C --> R
