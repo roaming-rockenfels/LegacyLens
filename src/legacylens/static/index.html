@@ -441,7 +441,7 @@ body {
             <div class="distressed-border p-3 flex items-center gap-3" style="border-radius: 0 0 8px 8px;">
                 <div class="grime-overlay"></div>
                 <span class="phosphor-glow text-xl relative z-10">&gt;</span>
-                <input id="results-input" class="flex-1 bg-transparent border-none p-2 font-mono text-lg phosphor-glow focus:ring-0 placeholder:opacity-20 uppercase relative z-10" placeholder="FOLLOW_UP_QUERY_" type="text">
+                <textarea id="results-input" class="flex-1 bg-transparent border-none p-2 font-mono text-lg phosphor-glow focus:ring-0 placeholder:opacity-20 uppercase relative z-10 resize-none" placeholder="FOLLOW_UP_QUERY_" rows="1" style="min-width: 0; overflow-wrap: break-word;"></textarea>
                 <div id="active-mode-badge" class="relative z-10 flex items-center gap-1.5 px-3 py-1 border border-[var(--phosphor-green)]/30 rounded phosphor-glow text-[12px] uppercase tracking-[0.2em] opacity-70 whitespace-nowrap">
                     <span id="badge-icon" class="material-symbols-outlined text-base">psychology</span>
                     <span id="badge-label">Explain</span>
@@ -503,12 +503,22 @@ body {
         }
     });
 
-    // Submit on Enter from results input
+    // Submit on Enter from results input (prevent newline in textarea)
     resultsInput.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' && this.value.trim()) {
-            submitQuery(this.value.trim());
-            this.value = '';
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            if (this.value.trim()) {
+                submitQuery(this.value.trim());
+                this.value = '';
+                this.style.height = 'auto';
+            }
         }
+    });
+
+    // Auto-resize textarea as user types
+    resultsInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = this.scrollHeight + 'px';
     });
 
     // Execute button
