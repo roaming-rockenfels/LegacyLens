@@ -10,6 +10,20 @@ from legacylens.api.server import app
 client = TestClient(app)
 
 
+def test_homepage():
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert "text/html" in resp.headers["content-type"]
+    assert "LegacyLens" in resp.text
+
+
+def test_easter_egg():
+    resp = client.get("/easter-egg")
+    assert resp.status_code == 200
+    assert "text/html" in resp.headers["content-type"]
+    assert "FORTRAN" in resp.text
+
+
 def test_health():
     resp = client.get("/health")
     assert resp.status_code == 200
