@@ -135,6 +135,23 @@ body {
     content: "_";
     animation: blink-cursor 1s step-end infinite;
 }
+/* Blinking cursor overlay for input - hides when input has content */
+.input-cursor-wrap {
+    position: relative;
+}
+.input-cursor-wrap .cursor-blink {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: "VT323", monospace;
+    color: var(--phosphor-green);
+    text-shadow: 0 0 8px rgba(51, 255, 51, 0.8);
+    font-size: 1.25rem;
+    pointer-events: none;
+    z-index: 20;
+    animation: blink-cursor 1s step-end infinite;
+}
 
 /* Results terminal markdown styling */
 #results-content h1, #results-content h2, #results-content h3,
@@ -268,8 +285,8 @@ body {
 
             <!-- Historical queries -->
             <div class="mt-auto border-t border-[var(--phosphor-green)]/20 pt-2 overflow-y-auto" style="max-height: 40%;">
-                <span class="block mb-1 opacity-50 text-[11px] phosphor-glow uppercase tracking-widest">Historical Queries</span>
-                <ul id="query-history" class="phosphor-glow text-base space-y-1">
+                <span class="block mb-1 opacity-50 text-[15px] phosphor-glow uppercase tracking-widest">Historical Queries</span>
+                <ul id="query-history" class="phosphor-glow text-xl space-y-1">
                     <li class="opacity-30 italic">No queries yet</li>
                 </ul>
             </div>
@@ -278,9 +295,10 @@ body {
 
     <!-- Box 3: Command Input -->
     <div class="space-y-3">
-        <div class="relative distressed-border rounded-md overflow-hidden p-1">
+        <div class="relative distressed-border rounded-md overflow-hidden p-1 input-cursor-wrap">
             <div class="grime-overlay opacity-30"></div>
-            <input id="command-input" class="w-full bg-black/90 border-none p-3 font-mono text-xl phosphor-glow focus:ring-0 placeholder:opacity-20 uppercase relative z-10" placeholder="ENTER_QUERY_" type="text">
+            <span id="input-cursor" class="cursor-blink">_</span>
+            <input id="command-input" class="w-full bg-black/90 border-none p-3 font-mono text-xl phosphor-glow focus:ring-0 placeholder:opacity-0 uppercase relative z-10" placeholder="ENTER_QUERY_" type="text">
         </div>
         <p class="text-[11px] uppercase tracking-[0.25em] text-slate-600 font-bold px-2">Hardware-Link: CRITICAL_ASSET_MONITOR</p>
     </div>
@@ -399,14 +417,14 @@ body {
     </div>
 
     <!-- RESULTS VIEW (hidden by default) -->
-    <div id="results-view" class="hidden flex-1 flex flex-col p-6 relative z-10">
+    <div id="results-view" class="hidden flex-1 flex flex-col p-6 relative z-10" style="min-height: 0;">
         <!-- Results terminal -->
-        <div class="crt-panel flex-1 flex flex-col overflow-hidden">
+        <div class="crt-panel flex-1 flex flex-col" style="min-height: 0;">
             <!-- Title bar -->
             <div class="distressed-border p-3 flex items-center gap-3 rounded-t-lg" style="border-radius: 8px 8px 0 0;">
                 <div class="grime-overlay"></div>
                 <div class="flex gap-2 relative z-10">
-                    <div class="w-3 h-3 rounded-full bg-red-800 border border-red-500/50"></div>
+                    <div id="close-results" class="w-3 h-3 rounded-full bg-red-800 border border-red-500/50 cursor-pointer hover:bg-red-600 transition-colors" title="Back to homepage"></div>
                     <div class="w-3 h-3 rounded-full bg-amber-700 border border-amber-500/50"></div>
                     <div class="w-3 h-3 rounded-full bg-green-800 border border-green-500/50"></div>
                 </div>
@@ -466,11 +484,18 @@ body {
     const resultsStream = document.getElementById('results-stream');
     const logoTitle = document.getElementById('logo-title');
 
+    // Blinking cursor — hide when input has content
+    const inputCursor = document.getElementById('input-cursor');
+    commandInput.addEventListener('input', function() {
+        inputCursor.style.display = this.value.length > 0 ? 'none' : '';
+    });
+
     // Submit on Enter from sidebar input
     commandInput.addEventListener('keydown', function(e) {
         if (e.key === 'Enter' && this.value.trim()) {
             submitQuery(this.value.trim());
             this.value = '';
+            inputCursor.style.display = 'none';
         }
     });
 
@@ -493,6 +518,11 @@ body {
     // Logo click returns to idle
     logoTitle.addEventListener('click', function() {
         if (isResultsView) showIdleView();
+    });
+
+    // Red close button returns to idle
+    document.getElementById('close-results').addEventListener('click', function() {
+        showIdleView();
     });
 
     // CRT card clicks trigger queries
@@ -547,15 +577,30 @@ body {
         idleView.classList.remove('hidden');
         idleView.classList.add('view-fade-enter');
         setTimeout(() => idleView.classList.remove('view-fade-enter'), 300);
-        // Reset process monitor to idle
+        // Reset process monitor to idle (preserve query history)
         processMonitor.classList.remove('hidden');
         processMonitor.innerHTML = '<p class="leading-relaxed">"Scanning local subnets... Found 14 legacy clusters. Ready for injection, Operator."</p>';
         pipelineStatus.classList.add('hidden');
         operatorInput.innerHTML = '<span class="opacity-50">AWAITING OPERATOR INPUT...</span>';
+        // Restore input
+        unlockInput();
+    }
+
+    function lockInput() {
+        commandInput.disabled = true;
+        commandInput.value = '---LOCKED---';
+        inputCursor.style.display = 'none';
+    }
+
+    function unlockInput() {
+        commandInput.disabled = false;
+        commandInput.value = '';
+        inputCursor.style.display = '';
     }
 
     function showResultsView() {
         isResultsView = true;
+        lockInput();
         idleView.classList.add('hidden');
         resultsView.classList.remove('hidden');
         resultsView.classList.add('view-fade-enter');
