@@ -596,13 +596,21 @@ body {
 
     function lockInput() {
         commandInput.disabled = true;
-        commandInput.value = '---LOCKED---';
+        commandInput.value = '--LOCKED--';
+        commandInput.style.textAlign = 'center';
+        commandInput.style.fontSize = '1.625rem';
+        commandInput.style.color = '#ef4444';
+        commandInput.style.textShadow = '0 0 8px rgba(239, 68, 68, 0.6)';
         inputCursor.style.display = 'none';
     }
 
     function unlockInput() {
         commandInput.disabled = false;
         commandInput.value = '';
+        commandInput.style.textAlign = '';
+        commandInput.style.fontSize = '';
+        commandInput.style.color = '';
+        commandInput.style.textShadow = '';
         inputCursor.style.display = '';
     }
 
