@@ -355,40 +355,7 @@ body {
                 </div>
             </div>
         </div>
-        <div class="flex gap-8 z-10 w-full px-12 justify-center">
-            <div class="crt-panel w-72 h-44 p-5 flex flex-col transform hover:scale-105 transition-transform cursor-pointer group" data-query="What does DGETRF do and what are its dependencies?">
-                <div class="oil-smudge scale-50 opacity-30 top-[-10px]"></div>
-                <div class="text-[12px] phosphor-glow uppercase tracking-[0.3em] mb-3 border-b border-[var(--phosphor-green)]/20 pb-1">Deep Query</div>
-                <p class="phosphor-glow text-xl font-mono leading-tight group-hover:brightness-125 transition-all">
-                    &gt; Explain DGETRF and its dependencies
-                </p>
-                <div class="mt-auto flex justify-between items-end opacity-40">
-                    <span class="text-[10px] font-mono">SECTOR: SRC_SCAN</span>
-                    <span class="material-symbols-outlined text-base">troubleshoot</span>
-                </div>
-            </div>
-            <div class="crt-panel w-72 h-44 p-5 flex flex-col transform hover:scale-105 transition-transform cursor-pointer group" data-query="How do LAPACK routines call BLAS subroutines?">
-                <div class="text-[12px] phosphor-glow uppercase tracking-[0.3em] mb-3 border-b border-[var(--phosphor-green)]/20 pb-1">Object Linker</div>
-                <p class="phosphor-glow text-xl font-mono leading-tight group-hover:brightness-125 transition-all">
-                    &gt; Map LAPACK to BLAS call graph
-                </p>
-                <div class="mt-auto flex justify-between items-end opacity-40">
-                    <span class="text-[10px] font-mono">SECTOR: BRIDGE_NET</span>
-                    <span class="material-symbols-outlined text-base">integration_instructions</span>
-                </div>
-            </div>
-            <div class="crt-panel w-72 h-44 p-5 flex flex-col transform hover:scale-105 transition-transform cursor-pointer group" data-query="Which LAPACK routines are most computationally intensive?">
-                <div class="oil-smudge scale-50 opacity-30 bottom-[-20px] right-[-10px]"></div>
-                <div class="text-[12px] phosphor-glow uppercase tracking-[0.3em] mb-3 border-b border-[var(--phosphor-green)]/20 pb-1">Heat Map</div>
-                <p class="phosphor-glow text-xl font-mono leading-tight group-hover:brightness-125 transition-all">
-                    &gt; Find most intensive routines
-                </p>
-                <div class="mt-auto flex justify-between items-end opacity-40">
-                    <span class="text-[10px] font-mono">SECTOR: VIS_ENGINE</span>
-                    <span class="material-symbols-outlined text-base">grid_view</span>
-                </div>
-            </div>
-        </div>
+        <div id="query-cards" class="flex gap-8 z-10 w-full px-12 justify-center"></div>
 
         <!-- Punch card -->
         <a href="/easter-egg" class="absolute bottom-14 right-4 group flex items-center gap-4 z-10">
@@ -539,12 +506,44 @@ body {
         showIdleView();
     });
 
-    // CRT card clicks trigger queries
-    document.querySelectorAll('[data-query]').forEach(function(card) {
-        card.addEventListener('click', function() {
-            submitQuery(this.getAttribute('data-query'));
+    // Query card pool — 3 randomly selected on each load
+    const cardPool = [
+        { label: 'Deep Query', query: 'What does DGETRF do and what are its dependencies?', display: 'Explain DGETRF and its dependencies', sector: 'SRC_SCAN', icon: 'troubleshoot' },
+        { label: 'Object Linker', query: 'How do LAPACK routines call BLAS subroutines?', display: 'Map LAPACK to BLAS call graph', sector: 'BRIDGE_NET', icon: 'integration_instructions' },
+        { label: 'Heat Map', query: 'Which LAPACK routines are most computationally intensive?', display: 'Find most intensive routines', sector: 'VIS_ENGINE', icon: 'grid_view' },
+        { label: 'Solver Trace', query: 'Walk through how DGESV solves a system of linear equations step by step.', display: 'Trace DGESV solver pipeline', sector: 'SOLVE_CORE', icon: 'route' },
+        { label: 'Error Path', query: 'What error conditions does DGETRF check for and how does it report them?', display: 'Map DGETRF error handling', sector: 'ERR_TRACE', icon: 'bug_report' },
+        { label: 'Param Decode', query: 'Explain all parameters of DGESVD and their roles in SVD computation.', display: 'Decode DGESVD parameters', sector: 'PARAM_MAP', icon: 'data_object' },
+        { label: 'Legacy Port', query: 'How would you modernize DLANGE into idiomatic Python or C++?', display: 'Modernize DLANGE routine', sector: 'PORT_ENGINE', icon: 'swap_horiz' },
+        { label: 'Math Core', query: 'What mathematical algorithm does DGEEV implement for eigenvalue computation?', display: 'Explain DGEEV algorithm', sector: 'MATH_CORE', icon: 'functions' },
+        { label: 'Memory Map', query: 'How does LAPACK manage workspace arrays and memory allocation?', display: 'Map workspace allocation', sector: 'MEM_ALLOC', icon: 'memory' },
+        { label: 'Precision', query: 'What are the differences between single and double precision LAPACK routines?', display: 'Compare S vs D precision', sector: 'PREC_UNIT', icon: 'compare' },
+        { label: 'Block Ops', query: 'How does blocked algorithm optimization work in LAPACK matrix factorizations?', display: 'Explain block optimizations', sector: 'BLK_ENGINE', icon: 'view_module' },
+        { label: 'Test Suite', query: 'How does LAPACK validate numerical accuracy in its test suite?', display: 'Analyze test methodology', sector: 'QA_VERIFY', icon: 'verified' },
+    ];
+
+    function renderQueryCards() {
+        var shuffled = cardPool.slice().sort(function() { return Math.random() - 0.5; });
+        var picked = shuffled.slice(0, 3);
+        var container = document.getElementById('query-cards');
+        container.innerHTML = picked.map(function(card) {
+            return '<div class="crt-panel w-72 h-44 p-5 flex flex-col transform hover:scale-105 transition-transform cursor-pointer group" data-query="' + card.query.replace(/"/g, '&quot;') + '">' +
+                '<div class="text-[12px] phosphor-glow uppercase tracking-[0.3em] mb-3 border-b border-[var(--phosphor-green)]/20 pb-1">' + card.label + '</div>' +
+                '<p class="phosphor-glow text-xl font-mono leading-tight group-hover:brightness-125 transition-all">&gt; ' + card.display + '</p>' +
+                '<div class="mt-auto flex justify-between items-end opacity-40">' +
+                '<span class="text-[10px] font-mono">SECTOR: ' + card.sector + '</span>' +
+                '<span class="material-symbols-outlined text-base">' + card.icon + '</span>' +
+                '</div></div>';
+        }).join('');
+        // Bind click handlers
+        container.querySelectorAll('[data-query]').forEach(function(el) {
+            el.addEventListener('click', function() {
+                submitQuery(this.getAttribute('data-query'));
+            });
         });
-    });
+    }
+
+    renderQueryCards();
 
     // Mode selector (radio-style — one active at a time)
     let activeMode = 'explain';
