@@ -1,0 +1,99 @@
+# flyctl launch added from .gitignore
+# Environment
+**/.env
+**/.env.local
+
+# Python
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/.venv
+**/venv
+**/*.egg-info
+**/dist
+**/build
+
+# Node (SkillShed)
+**/node_modules
+
+# IDE
+**/.vscode
+**/.idea
+**/*.swp
+
+# OS
+**/.DS_Store
+**/Thumbs.db
+
+# Data (cloned repos)
+**/data
+
+# Claude
+**/.claude
+
+# SkillShed (separate repo)
+**/SkillShed
+
+# flyctl launch added from .pytest_cache/.gitignore
+# Created by pytest automatically.
+.pytest_cache/**/*
+
+# flyctl launch added from .venv/.gitignore
+# Created by venv; see https://docs.python.org/3/library/venv.html
+.venv/**/*
+
+# flyctl launch added from SkillShed/.gitignore
+SkillShed/**/node_modules
+SkillShed/**/dist
+
+# flyctl launch added from data/lapack/.gitignore
+# ignore objects and archives, anywhere in the tree.
+data/lapack/**/*.[oa]
+
+# test in INSTALL
+data/lapack/**/INSTALL/test*
+
+# local make.inc
+data/lapack/**/make.inc
+
+# BLAS testing
+data/lapack/**/BLAS/TESTING/*.out
+data/lapack/**/BLAS/TESTING/x*
+
+# CBLAS
+data/lapack/**/CBLAS/include/cblas_mangling.h
+
+# CBLAS testing
+data/lapack/**/CBLAS/testing/*.out
+data/lapack/**/CBLAS/testing/x*
+
+# CBLAS examples
+data/lapack/**/CBLAS/examples/cblas_ex1
+data/lapack/**/CBLAS/examples/cblas_ex2
+
+# LAPACK testing
+data/lapack/**/TESTING/LIN/xlintst*
+data/lapack/**/TESTING/EIG/xeigtst*
+data/lapack/**/TESTING/EIG/xdmd*
+data/lapack/**/TESTING/*.out
+data/lapack/**/TESTING/*.txt
+!data/lapack/**/TESTING/CMakeLists.txt
+data/lapack/**/TESTING/x*
+
+# LAPACKE example
+data/lapack/**/LAPACKE/example/xexample*
+
+# SED
+data/lapack/**/SRC/*-e
+data/lapack/**/LAPACKE/src/*-e
+data/lapack/**/build*
+
+# DOCS documentation
+data/lapack/**/DOCS/man
+data/lapack/**/DOCS/explore-html
+data/lapack/**/output_err
+
+# Mod files from compilation in SRC
+data/lapack/**/SRC/la_constants.mod
+data/lapack/**/SRC/la_xisnan.mod
+fly.toml

@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
+
+STATIC_DIR = Path(__file__).parent.parent / "static"
 
 app = FastAPI(
     title="LegacyLens API",
@@ -40,6 +45,16 @@ class QueryResponse(BaseModel):
 class StatsResponse(BaseModel):
     total_vector_count: int
     dimension: int
+
+
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+def homepage():
+    return (STATIC_DIR / "index.html").read_text()
+
+
+@app.get("/easter-egg", response_class=HTMLResponse, include_in_schema=False)
+def easter_egg():
+    return (STATIC_DIR / "easter-egg.html").read_text()
 
 
 @app.get("/health")

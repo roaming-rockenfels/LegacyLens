@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Fortran History Easter Egg Page</title>
+<script src="https://cdn.tailwindcss.com/?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Arvo:wght@400;700&family=Pacifico&family=Courier+Prime:wght@400;700&family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&display=swap" rel="stylesheet">
+<style type="text/tailwindcss">
+    :root {
+        --cream: #F5F2E7;
+        --mustard: #E1AD01;
+        --teal: #1B4D4B;
+        --deep-teal: #0D2C2B;
+        --paper-texture: #E8E2D0;
+        --accent-red: #C84B31;
+    }
+    body {
+        background-color: var(--paper-texture);
+        font-family: 'Space Grotesk', sans-serif;
+        color: var(--deep-teal);
+        background-image:
+            radial-gradient(circle at 2px 2px, rgba(0,0,0,0.05) 1px, transparent 0);
+        background-size: 40px 40px;
+    }
+    .slab-serif {
+        font-family: 'Arvo', serif;
+    }
+    .script-font {
+        font-family: 'Pacifico', cursive;
+    }
+    .mono-font {
+        font-family: 'Courier Prime', monospace;
+    }
+    .vintage-border {
+        border: 4px double var(--teal);
+        outline: 1px solid var(--teal);
+        outline-offset: 4px;
+    }
+    .halftone {
+        background-image: radial-gradient(var(--teal) 1px, transparent 0);
+        background-size: 4px 4px;
+        opacity: 0.1;
+    }
+    .mid-century-card {
+        background-color: var(--cream);
+        box-shadow: 15px 15px 0px var(--teal);
+    }
+</style>
+</head>
+<body class="min-h-screen p-8 overflow-x-hidden">
+<div class="max-w-6xl mx-auto relative">
+<header class="border-b-8 border-[var(--teal)] pb-6 mb-12 flex flex-col md:flex-row justify-between items-end gap-6">
+<div class="flex-1">
+<span class="block text-sm uppercase tracking-[0.4em] font-bold text-[var(--accent-red)] mb-2">Modern Science Series &bull; Vol. 1957</span>
+<h1 class="slab-serif text-8xl font-bold leading-none tracking-tighter text-[var(--deep-teal)]">
+                FORTRAN
+            </h1>
+<p class="script-font text-4xl text-[var(--mustard)] -mt-4 ml-2">The Formula Translating System</p>
+</div>
+<div class="text-right flex flex-col items-end">
+<div class="vintage-border px-4 py-2 mb-2 bg-[var(--mustard)]">
+<span class="slab-serif font-bold text-xl uppercase italic">Technical Manual 704</span>
+</div>
+<p class="mono-font text-xs max-w-xs opacity-80 leading-tight">
+                A COMPREHENSIVE GUIDE TO AUTOMATIC PROGRAMMING FOR THE ELECTRONIC DATA PROCESSING MACHINE.
+            </p>
+</div>
+</header>
+<main class="grid grid-cols-12 gap-10">
+<div class="col-span-12 lg:col-span-5 flex flex-col gap-8">
+<div class="mid-century-card p-6 border-2 border-[var(--teal)] relative overflow-hidden">
+<div class="absolute inset-0 halftone pointer-events-none"></div>
+<div class="relative z-10">
+<img alt="IBM 704 Mainframe" class="w-full grayscale contrast-125 mb-4 border border-[var(--teal)]" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAFdkQR2dozj6adAaatBf5C4T0Ynd5vUFZ9r_wAcNpHptNnjdeMakh-nXlXIiwYl157ZA6a1i92g6XGjTDn2TdyvoC0BT32GtBolDakD2QrrV11il7Tm00-mPTrZPX4i4U37_0gB7y0s1eGUImiWUtSGDmF5ZfX8IqKeeGsYfKCs5GipnbcFHV746ORKCeyfhVc7Tbpu7C3uZd19X25gBKN4v-fB0nT8i8W08hfNRp9ix9JHjMWpzGWVCvDZk9umlYqwKw7GPhhlZQ">
+<div class="bg-[var(--teal)] text-[var(--cream)] p-3 slab-serif italic text-sm text-center">
+                        FIG. 1: THE IBM 704 OPERATING IN A CONTROLLED ENVIRONMENT
+                    </div>
+</div>
+</div>
+<div class="p-8 border-4 border-dashed border-[var(--mustard)] bg-[var(--cream)] relative">
+<span class="absolute -top-4 left-4 bg-[var(--mustard)] text-white px-3 py-1 slab-serif font-bold text-sm">FUN FACT</span>
+<p class="slab-serif text-lg leading-snug">
+                    Before Fortran, programmers used <span class="text-[var(--accent-red)] font-bold">Assembly</span> or <span class="text-[var(--accent-red)] font-bold">Binary</span> code&mdash;a painstaking process where a single mistake meant hours of manual debugging.
+                </p>
+</div>
+</div>
+<div class="col-span-12 lg:col-span-7 space-y-8">
+<section class="prose prose-teal max-w-none">
+<h2 class="slab-serif text-4xl font-bold border-b-2 border-[var(--mustard)] inline-block mb-6 uppercase tracking-tight">The Birth of Computing Freedom</h2>
+<p class="text-xl leading-relaxed first-letter:text-7xl first-letter:font-bold first-letter:float-left first-letter:mr-3 first-letter:mt-2 first-letter:slab-serif first-letter:text-[var(--teal)]">
+                    In late 1953, John Backus submitted a proposal to his superiors at IBM to develop a more practical alternative to assembly language for programming their IBM 704 mainframe computer. What emerged in 1957 was FORTRAN&mdash;the world's first widely used high-level language.
+                </p>
+<p class="text-lg leading-relaxed mt-4">
+                    Designed specifically for scientific and engineering calculations, it allowed humans to write code using mathematical formulas that looked remarkably similar to algebraic notation. This revolutionary concept meant that scientists could focus on the <strong>math</strong>, rather than the <strong>machine</strong>.
+                </p>
+</section>
+<div class="grid grid-cols-2 gap-6 py-6">
+<div class="border-t-2 border-[var(--teal)] pt-4">
+<h4 class="slab-serif font-bold text-[var(--teal)] uppercase text-xs tracking-widest mb-2">Efficiency</h4>
+<p class="text-sm">The first compiler was so efficient that it could produce machine code as good as that written by expert human programmers.</p>
+</div>
+<div class="border-t-2 border-[var(--teal)] pt-4">
+<h4 class="slab-serif font-bold text-[var(--teal)] uppercase text-xs tracking-widest mb-2">Legacy</h4>
+<p class="text-sm">70 years later, Fortran remains the gold standard for high-performance computing in weather modeling and aerospace.</p>
+</div>
+</div>
+<div class="bg-[var(--deep-teal)] text-[var(--cream)] p-8 rounded-sm shadow-inner relative">
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-[var(--mustard)]">code</span>
+<h3 class="slab-serif font-bold text-xl">The Formula Translator</h3>
+</div>
+<div class="mono-font space-y-2 text-sm">
+<p class="text-[var(--mustard)] opacity-70">C   A TYPICAL FORTRAN PROGRAM SEGMENT</p>
+<p>DO 10 I = 1, 100</p>
+<p class="pl-4">Y = SQRT(ABS(X(I))) + 5.0 * X(I)**3</p>
+<p class="pl-4">IF (Y .GT. 400.0) WRITE(6, 100) I, Y</p>
+<p>10 CONTINUE</p>
+</div>
+<div class="absolute -bottom-4 -right-4 bg-[var(--mustard)] text-[var(--deep-teal)] p-3 font-bold slab-serif transform rotate-3 shadow-lg">
+                    1957 MODERN!
+                </div>
+</div>
+</div>
+</main>
+<footer class="mt-20 pt-8 border-t-2 border-[var(--teal)] flex flex-col md:flex-row items-center justify-between gap-8 mb-12">
+<div class="flex items-center gap-4">
+<div>
+<p class="slab-serif font-bold leading-tight">ATOMIC AGE COMPUTING</p>
+<p class="text-xs opacity-60 uppercase tracking-tighter italic">"Yesterday's future, today's foundations"</p>
+</div>
+</div>
+<a class="group relative px-8 py-4 bg-[var(--teal)] text-[var(--cream)] slab-serif font-bold text-xl uppercase transition-all hover:bg-[var(--accent-red)] flex items-center gap-3" href="/">
+<span class="material-symbols-outlined group-hover:-translate-x-1 transition-transform">keyboard_double_arrow_left</span>
+            Back to the Future
+            <div class="absolute -inset-1 border border-[var(--teal)] group-hover:border-[var(--accent-red)] -z-10 translate-x-1 translate-y-1"></div>
+</a>
+</footer>
+<div class="fixed top-0 left-0 w-32 h-32 opacity-10 pointer-events-none">
+<svg class="text-[var(--teal)]" fill="currentColor" viewBox="0 0 100 100">
+<circle cx="50" cy="50" fill="none" r="40" stroke="currentColor" stroke-width="2"></circle>
+<ellipse cx="50" cy="50" fill="none" rx="45" ry="15" stroke="currentColor" stroke-width="1" transform="rotate(45 50 50)"></ellipse>
+<ellipse cx="50" cy="50" fill="none" rx="45" ry="15" stroke="currentColor" stroke-width="1" transform="rotate(-45 50 50)"></ellipse>
+</svg>
+</div>
+<div class="fixed bottom-0 right-0 w-48 h-48 opacity-10 pointer-events-none">
+<img alt="" class="grayscale brightness-50" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCYcD5pvlFklsstXVofSIyUc2BhZybVh4Ixt_99Mi7NOEpKwOWA5wLI5cekx34j8eCKRcaF-AS9wVKoPRKFHv3oFWkuJYuKVJ14zuFtavWPwu0ECZO_xqepqwZy4Il5hYCbW--Xe-F6dk_QIwbY-8taujYN1vHtaKmSPWjOThArtB4cfqR4HpSQ6-Pj7djhIM1e46rwniO52gv-ieBJ9xiRyOgT5oIiWdcbDGg3b0HKRsg0C3g_Z8uT3L2CmwDEDWlB3R0BGp86XBg">
+</div>
+</div>
+</body></html>

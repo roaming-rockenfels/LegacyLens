@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>LegacyLens Weathered Terminal</title>
+<script src="https://cdn.tailwindcss.com/?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Space+Mono:wght@400;700&family=VT323&family=Bungee&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style type="text/tailwindcss">
+:root {
+    --neon-pink: #ff2d95;
+    --phosphor-green: #3f3;
+    --vault-metal: #2c2e30;
+    --vault-border: #3d3f41;
+    --crt-bg: #0e100e;
+    --terminal-dark: #080808;
+    --rust-color: #5d3a1a;
+    --oil-stain: rgba(0, 0, 0, 0.6)
+}
+body {
+    background-color: var(--terminal-dark);
+    font-family: "Roboto", sans-serif;
+    color: #e0e0e0;
+    overflow: hidden
+}
+.sidebar-texture {
+    background-color: #2a2c2e;
+    background-image: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), url(https://lh3.googleusercontent.com/aida-public/AB6AXuCXfo-xvUDuxI1pyU6WiCEhib1Ut0uwN13n6KgLH3sRsbcObcKGbPiOjCpa6nc4JGyzlhREDv_53XnMuLz2tYrhg-s0GQ7hULR-WF0SlCbMAPwM92oCCUSDLzcZbf3LBHiOSQsDdxZoXHaUvocSj9yDDXXFK2ah6zAhwvK1EXirleUQk5UdL8Dj499c325qC0xBuPb_a_tVZJo6_Lc-8S1QVI28Ak2ScLJtK1JWmb2uzfK5VYxp4xeV02U9nVObxgQlYfMyZLTAIvM), url(https://lh3.googleusercontent.com/aida-public/AB6AXuDeWu6FboBAvYP2OwRD_IVVFUrpPo9S7L46xXynq7rXYDTUYZlDzGdO1pO-2MEKoBdJ5_807faOmkZdz2M9p4vl1t9txYoW70wQIOdmftUmHKvlcGGDbMkmncXtzp8gVldgUDINrr1uVAsBJaMM_s39T9cQTBgKoaYofcl4-JGMFzpYutjMZOd1BGdrIZ3ohPwZFV5-bnZKZMnIzUn22NgztVs3mK6D0IdZx488HOKj-xUmiQvdPg7AEW9hU4p5rJwvfEm9L88oHDQ);
+    background-size: cover;
+    background-blend-mode: multiply, normal, overlay;
+    position: relative
+}
+.sidebar-texture::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 20% 30%, var(--rust-color) 0%, transparent 40%), radial-gradient(circle at 80% 70%, var(--oil-stain) 0%, transparent 50%);
+    opacity: 0.4;
+    pointer-events: none
+}
+.distressed-border {
+    border: 4px solid var(--vault-border);
+    background: linear-gradient(135deg, #2c2e30 0%, #1a1c1d 100%);
+    box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.9), 4px 4px 10px rgba(0, 0, 0, 0.5);
+    position: relative;
+    overflow: hidden
+}
+.distressed-border::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: url(https://lh3.googleusercontent.com/aida-public/AB6AXuB5Nyn-U6NTIIC1YOGbptSuahUyS-2aVyLE3MSjB2x9_ZY-IFJpaI8bj9QsORcpVU_F3RyCGMIT3XFX1YMXYx_JYWKCgTXND25eWMhq-twHMTRfGBJFeaL1ybN2xecnTFrImY8MTyS4Y8ZRetuDjNCkSHyBITrtK7b9GHbf6Ey6azPChRsmaPwmluuXGa6kyHn4KkhylMrkdKOor32RcmTotFP51XBITsITXgcW1gwABdRppwrK2MCpi1r8-nk9ClRjKm6Y0KRt01I);
+    opacity: 0.2;
+    pointer-events: none
+}
+.grime-overlay {
+    position: absolute;
+    inset: 0;
+    background-image: url(https://lh3.googleusercontent.com/aida-public/AB6AXuDpYXV52H9hkAgvES2d9PKlz6eWCMIoblw0pAEw2VltKLNy7FDhx8H9dAtWWwXxhW9RW8WqUE-n_C7vW1wKFvbh-TkSC4CHWLectGNNSv-KIM0n1DMliqEALFqoePzHTv0wnhehWyQTI6O3v5A6Ru_NhXoGwkNd918pMKPVG2JE7PLSOwsx8J1mezXMqNTlnsz6nPhBEM4idDt6X5llQiry0ySl0r994fJCL_adojbDuo9KHgrse4_lgbPNQVcj5qXdAjlytPITIek);
+    opacity: 0.15;
+    pointer-events: none;
+    mix-blend-mode: overlay
+}
+.scanlines {
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+    background-size: 100% 3px, 3px 100%;
+    z-index: 100;
+    pointer-events: none
+}
+.neon-text {
+    font-family: "Pacifico", cursive;
+    color: var(--neon-pink);
+    text-shadow: 0 0 5px #fff, 0 0 15px var(--neon-pink), 0 0 30px var(--neon-pink), 0 0 50px var(--neon-pink)
+}
+.phosphor-glow {
+    font-family: "VT323", monospace;
+    color: var(--phosphor-green);
+    text-shadow: 0 0 8px rgba(51, 255, 51, 0.8), 0 0 2px rgba(255, 255, 255, 0.5)
+}
+.crt-panel {
+    background: var(--crt-bg);
+    border: 4px solid #222;
+    border-radius: 12px;
+    box-shadow: inset 0 0 50px black, 0 0 20px rgba(0, 0, 0, 0.8);
+    position: relative;
+    overflow: hidden
+}
+.crt-panel::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: radial-gradient(rgba(18, 16, 16, 0) 60%, rgba(0, 0, 0, 0.4) 100%), linear-gradient(0deg, rgba(18, 16, 16, 0.1) 50%, rgba(255, 255, 255, 0.03) 50%);
+    background-size: 100% 100%, 100% 4px;
+    pointer-events: none
+}
+.oil-smudge {
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    background: radial-gradient(circle, var(--oil-stain) 0%, transparent 70%);
+    filter: blur(10px);
+    opacity: 0.6;
+    pointer-events: none
+}
+.punch-card-distressed {
+    background: #c5c7c9;
+    box-shadow: 0 0 25px rgba(51, 255, 51, 0.3);
+    clip-path: polygon(0 0, 92% 0, 100% 15%, 100% 100%, 0 100%);
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    position: relative
+}
+.punch-card-distressed::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: url(https://www.transparenttextures.com/patterns/stardust.png), linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.1));
+    opacity: 0.5
+}
+.retro-grid {
+    background-image: linear-gradient(to right, rgba(255, 45, 149, 0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 45, 149, 0.03) 1px, transparent 1px);
+    background-size: 60px 60px
+}
+
+/* Blinking cursor animation */
+@keyframes blink-cursor {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+.blink-cursor::after {
+    content: "_";
+    animation: blink-cursor 1s step-end infinite;
+}
+/* Blinking cursor overlay for input - hides when input has content */
+.input-cursor-wrap {
+    position: relative;
+}
+.input-cursor-wrap .cursor-blink {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: "VT323", monospace;
+    color: var(--phosphor-green);
+    text-shadow: 0 0 8px rgba(51, 255, 51, 0.8);
+    font-size: 1.25rem;
+    pointer-events: none;
+    z-index: 20;
+    animation: blink-cursor 1s step-end infinite;
+}
+
+/* Results terminal markdown styling */
+#results-content h1, #results-content h2, #results-content h3,
+#results-content h4, #results-content h5, #results-content h6 {
+    color: var(--phosphor-green);
+    font-family: "VT323", monospace;
+    text-shadow: 0 0 8px rgba(51, 255, 51, 0.8);
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(51, 255, 51, 0.2);
+    padding-bottom: 0.25rem;
+}
+#results-content h1 { font-size: 1.75rem; }
+#results-content h2 { font-size: 1.5rem; }
+#results-content h3 { font-size: 1.25rem; }
+#results-content p {
+    margin-bottom: 0.75rem;
+    line-height: 1.6;
+}
+#results-content code {
+    background: rgba(51, 255, 51, 0.1);
+    padding: 0.15em 0.4em;
+    border-radius: 3px;
+    font-size: 0.95em;
+}
+#results-content pre {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(51, 255, 51, 0.2);
+    border-radius: 6px;
+    padding: 1rem;
+    overflow-x: auto;
+    margin-bottom: 0.75rem;
+}
+#results-content pre code {
+    background: none;
+    padding: 0;
+}
+#results-content ul, #results-content ol {
+    margin-left: 1.5rem;
+    margin-bottom: 0.75rem;
+}
+#results-content ul { list-style-type: disc; }
+#results-content ol { list-style-type: decimal; }
+#results-content li { margin-bottom: 0.25rem; }
+#results-content strong { color: #5f5; }
+#results-content a { color: var(--neon-pink); text-decoration: underline; }
+#results-content blockquote {
+    border-left: 3px solid var(--phosphor-green);
+    padding-left: 1rem;
+    opacity: 0.8;
+    margin-bottom: 0.75rem;
+}
+
+/* Transition helpers */
+.view-fade-enter { animation: fadeIn 0.3s ease-out; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* Mode button depressed/active state */
+.mode-btn {
+    transition: all 0.15s ease;
+}
+.mode-btn.active {
+    border-color: var(--phosphor-green) !important;
+    background: linear-gradient(180deg, #0a0c0a 0%, #1a1c1d 100%) !important;
+    box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.9), inset 0 0 12px rgba(51, 255, 51, 0.1) !important;
+    transform: translateY(1px);
+}
+.mode-btn.active .material-symbols-outlined {
+    filter: brightness(1.5) drop-shadow(0 0 4px rgba(51, 255, 51, 0.6));
+}
+.mode-btn.active .mode-label {
+    opacity: 1 !important;
+    text-shadow: 0 0 8px rgba(51, 255, 51, 0.8);
+}
+
+/* Progress bar animation */
+@keyframes progress-fill {
+    from { width: 0%; }
+    to { width: 100%; }
+}
+.progress-animate {
+    animation: progress-fill 3s ease-in-out;
+}
+</style>
+</head>
+<body class="h-screen flex">
+<div class="scanlines"></div>
+
+<!-- LEFT SIDEBAR -->
+<aside class="w-1/3 h-full sidebar-texture border-r-8 border-[#3a3c3e] flex flex-col p-6 z-20 relative shadow-2xl">
+
+    <!-- Box 1: OPERATOR INPUT -->
+    <div class="distressed-border p-4 mb-4 rounded-lg">
+        <div class="grime-overlay"></div>
+        <div class="relative z-10">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 rounded-full border-4 border-slate-600 bg-slate-900 flex items-center justify-center shadow-inner relative">
+                    <div class="absolute inset-0 bg-black/20 rounded-full"></div>
+                    <span class="material-symbols-outlined text-[var(--phosphor-green)] text-xl relative z-10">terminal</span>
+                </div>
+                <h2 class="text-[12px] font-bold tracking-[0.4em] text-slate-500 uppercase">Operator Input</h2>
+            </div>
+            <div id="operator-input" class="phosphor-glow text-xl font-mono leading-relaxed min-h-[2.5rem]">
+                <span class="opacity-50">AWAITING OPERATOR INPUT...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Box 2: PROCESS MONITOR -->
+    <div class="crt-panel p-4 mb-4 flex-grow flex flex-col overflow-hidden">
+        <div class="oil-smudge top-[-20px] left-[-20px]"></div>
+        <div class="relative z-10 flex flex-col h-full overflow-hidden">
+            <span class="block mb-3 opacity-70 text-[12px] phosphor-glow uppercase tracking-widest border-b border-[var(--phosphor-green)]/30 pb-1">Process Monitor</span>
+
+            <div id="process-monitor" class="phosphor-glow text-xl font-mono mb-3">
+                <p class="leading-relaxed">"Scanning local subnets... Found 14 legacy clusters. Ready for injection, Operator."</p>
+            </div>
+
+            <!-- Feature toggle alerts -->
+            <div id="feature-alerts" class="phosphor-glow text-lg font-mono space-y-1 mb-2"></div>
+
+            <!-- Pipeline status (hidden until query) -->
+            <div id="pipeline-status" class="hidden phosphor-glow text-lg font-mono space-y-1 mb-3">
+                <div id="stage-vector" class="flex justify-between"><span>VECTOR SEARCH:</span><span class="opacity-50">STANDBY</span></div>
+                <div id="stage-llm" class="flex justify-between"><span>LLM INFERENCE:</span><span class="opacity-50">STANDBY</span></div>
+                <div id="stage-rerank" class="flex justify-between"><span>KNOWLEDGE RERANK:</span><span class="opacity-50">STANDBY</span></div>
+                <div class="h-1.5 w-full bg-[var(--phosphor-green)]/10 rounded overflow-hidden mt-2">
+                    <div id="progress-bar" class="h-full w-0 bg-[var(--phosphor-green)] shadow-[0_0_15px_var(--phosphor-green)] transition-all duration-500"></div>
+                </div>
+            </div>
+
+            <!-- Historical queries -->
+            <div class="mt-auto border-t border-[var(--phosphor-green)]/20 pt-2 overflow-y-auto" style="max-height: 40%;">
+                <span class="block mb-1 opacity-50 text-[15px] phosphor-glow uppercase tracking-widest">Historical Queries</span>
+                <ul id="query-history" class="phosphor-glow text-xl space-y-1">
+                    <li class="opacity-30 italic">No queries yet</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Box 3: Command Input -->
+    <div class="space-y-3">
+        <div class="relative distressed-border rounded-md overflow-hidden p-1 input-cursor-wrap">
+            <div class="grime-overlay opacity-30"></div>
+            <span id="input-cursor" class="cursor-blink">_</span>
+            <input id="command-input" class="w-full bg-black/90 border-none p-3 font-mono text-xl phosphor-glow focus:ring-0 placeholder:opacity-0 uppercase relative z-10" placeholder="ENTER_QUERY_" type="text">
+        </div>
+        <p class="text-[11px] uppercase tracking-[0.25em] text-slate-600 font-bold px-2">Hardware-Link: CRITICAL_ASSET_MONITOR</p>
+    </div>
+
+    <!-- Mode selector buttons (radio-style, one active at a time) -->
+    <div class="mt-4 grid grid-cols-4 gap-3 relative">
+        <div class="mode-btn active aspect-square distressed-border rounded flex flex-col items-center justify-center hover:brightness-125 cursor-pointer gap-1" data-mode="explain" title="Explain code purpose, logic, and behavior">
+            <span class="material-symbols-outlined text-[var(--phosphor-green)] text-2xl">psychology</span>
+            <span class="mode-label text-[14px] phosphor-glow uppercase tracking-wider relative z-10">Explain</span>
+        </div>
+        <div class="mode-btn aspect-square distressed-border rounded flex flex-col items-center justify-center hover:brightness-125 cursor-pointer gap-1" data-mode="deps" title="Map dependencies and call chains">
+            <span class="material-symbols-outlined text-[var(--phosphor-green)] text-2xl">hub</span>
+            <span class="mode-label text-[14px] phosphor-glow uppercase tracking-wider opacity-50 relative z-10">Deps</span>
+        </div>
+        <div class="mode-btn aspect-square distressed-border rounded flex flex-col items-center justify-center hover:brightness-125 cursor-pointer gap-1" data-mode="docs" title="Generate modern documentation with params and examples">
+            <span class="material-symbols-outlined text-[var(--phosphor-green)] text-2xl">description</span>
+            <span class="mode-label text-[14px] phosphor-glow uppercase tracking-wider opacity-50 relative z-10">Docs</span>
+        </div>
+        <div class="mode-btn aspect-square distressed-border rounded flex flex-col items-center justify-center hover:brightness-125 cursor-pointer gap-1" data-mode="business_logic" title="Extract business rules and domain logic">
+            <span class="material-symbols-outlined text-[var(--phosphor-green)] text-2xl">rule</span>
+            <span class="mode-label text-[14px] phosphor-glow uppercase tracking-wider opacity-50 relative z-10">Logic</span>
+        </div>
+    </div>
+</aside>
+
+<!-- RIGHT MAIN AREA -->
+<main class="w-2/3 h-full relative overflow-hidden retro-grid flex flex-col bg-[#050505]">
+    <div class="absolute inset-0 bg-gradient-to-br from-pink-900/10 via-transparent to-black pointer-events-none"></div>
+
+    <!-- Status indicator dots (always visible) -->
+    <div class="absolute top-4 left-4 flex gap-4 py-2 px-3 z-10">
+        <div class="flex flex-col items-center gap-1">
+            <div class="w-3.5 h-3.5 rounded-full bg-red-800 border border-red-500/50 shadow-[0_0_10px_red]"></div>
+            <span class="text-[10px] uppercase font-bold text-slate-500">Core</span>
+        </div>
+        <div class="flex flex-col items-center gap-1">
+            <div class="w-3.5 h-3.5 rounded-full bg-amber-700 border border-amber-500/50 shadow-[0_0_10px_orange]"></div>
+            <span class="text-[10px] uppercase font-bold text-slate-500">Link</span>
+        </div>
+        <div class="flex flex-col items-center gap-1">
+            <div class="w-3.5 h-3.5 rounded-full bg-green-800 border border-green-500/50 shadow-[0_0_10px_#33ff33]"></div>
+            <span class="text-[10px] uppercase font-bold text-slate-500">Rad</span>
+        </div>
+    </div>
+
+    <!-- IDLE VIEW -->
+    <div id="idle-view" class="flex-1 flex flex-col items-center justify-evenly pt-10 pb-28 relative">
+        <div class="relative z-10 flex flex-col items-center" style="margin-bottom: 2.5%;">
+            <div class="relative">
+                <h1 id="logo-title" class="neon-text text-[10rem] md:text-[12rem] leading-none select-none tracking-tighter filter drop-shadow-[0_0_60px_rgba(255,45,149,0.4)] cursor-pointer">LegacyLens</h1>
+                <div class="absolute -bottom-4 right-4 text-right">
+                    <span class="text-[14px] text-pink-500/40 font-mono uppercase tracking-[0.5em] block">Unified Analyzer Module</span>
+                    <span class="text-[11px] text-slate-600 mt-1 font-mono uppercase tracking-widest">Est. 1957 // Refurbished 2077</span>
+                </div>
+            </div>
+        </div>
+        <div id="query-cards" class="flex gap-8 z-10 w-full px-12 justify-center"></div>
+
+        <!-- Punch card -->
+        <a href="/easter-egg" class="absolute bottom-14 right-4 group flex items-center gap-4 z-10">
+            <div class="text-right">
+                <div class="text-[var(--phosphor-green)] font-black text-[22px] italic tracking-tighter drop-shadow-sm opacity-80 group-hover:opacity-100 transition-opacity">PUNCH-LOG v.3</div>
+                <div class="text-[11px] text-slate-600 uppercase tracking-widest font-bold">Analog Data Port</div>
+            </div>
+            <div class="relative">
+                <div class="absolute -top-14 -left-10 pointer-events-none opacity-40 group-hover:opacity-60 group-hover:rotate-45 transition-all duration-500">
+                    <span class="material-symbols-outlined text-7xl text-slate-500">settings_suggest</span>
+                </div>
+                <div class="punch-card-distressed w-36 h-20 flex flex-wrap p-2 gap-1 relative overflow-hidden group-hover:shadow-[0_0_35px_rgba(51,255,51,0.5)] transition-all">
+                    <div class="w-1.5 h-2.5 bg-black/70 absolute top-2 left-3 rounded-sm shadow-inner"></div>
+                    <div class="w-1.5 h-2.5 bg-black/70 absolute top-2 left-8 rounded-sm shadow-inner"></div>
+                    <div class="w-1.5 h-2.5 bg-black/70 absolute top-7 left-12 rounded-sm shadow-inner"></div>
+                    <div class="w-1.5 h-2.5 bg-black/70 absolute top-4 left-16 rounded-sm shadow-inner"></div>
+                    <div class="w-1.5 h-2.5 bg-black/70 absolute top-10 left-5 rounded-sm shadow-inner"></div>
+                    <div class="w-1.5 h-2.5 bg-black/70 absolute top-3 left-26 rounded-sm shadow-inner"></div>
+                    <div class="w-1.5 h-2.5 bg-black/70 absolute top-12 left-20 rounded-sm shadow-inner"></div>
+                    <div class="w-1.5 h-2.5 bg-black/70 absolute top-8 left-30 rounded-sm shadow-inner"></div>
+                    <div class="absolute inset-0 bg-yellow-900/10 pointer-events-none"></div>
+                    <div class="absolute bottom-1 right-2 text-[10px] font-black text-slate-700/50 uppercase tracking-tighter italic">DATA_INPUT_77</div>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <!-- RESULTS VIEW (hidden by default) -->
+    <div id="results-view" class="hidden flex-1 flex flex-col p-6 relative z-10" style="min-height: 0;">
+        <!-- Results terminal -->
+        <div class="crt-panel flex-1 flex flex-col" style="min-height: 0;">
+            <!-- Title bar -->
+            <div class="distressed-border p-3 flex items-center gap-3 rounded-t-lg" style="border-radius: 8px 8px 0 0;">
+                <div class="grime-overlay"></div>
+                <div class="flex gap-2 relative z-10">
+                    <div id="close-results" class="w-3 h-3 rounded-full bg-red-800 border border-red-500/50 cursor-pointer hover:bg-red-600 transition-colors" title="Back to homepage"></div>
+                    <div class="w-3 h-3 rounded-full bg-amber-700 border border-amber-500/50"></div>
+                    <div class="w-3 h-3 rounded-full bg-green-800 border border-green-500/50"></div>
+                </div>
+                <span id="results-title" class="phosphor-glow text-base uppercase tracking-[0.3em] relative z-10">ROUTINE DATA: ---</span>
+                <span id="results-stream" class="ml-auto phosphor-glow text-[12px] opacity-50 relative z-10">ENCRYPTED STREAM 0x0000</span>
+            </div>
+            <!-- Scrollable content -->
+            <div class="flex-1 overflow-y-auto p-6 relative z-10" style="scrollbar-width: thin; scrollbar-color: var(--phosphor-green) var(--crt-bg);">
+                <div id="results-content" class="phosphor-glow text-2xl font-mono leading-relaxed">
+                    <p class="opacity-50 animate-pulse">Awaiting data stream...</p>
+                </div>
+            </div>
+            <!-- Bottom input bar -->
+            <div class="distressed-border p-3 flex items-center gap-3" style="border-radius: 0 0 8px 8px;">
+                <div class="grime-overlay"></div>
+                <span class="phosphor-glow text-xl relative z-10">&gt;</span>
+                <textarea id="results-input" class="flex-1 bg-black/80 rounded border-none p-2 font-mono text-lg phosphor-glow focus:ring-0 placeholder:opacity-20 uppercase relative z-10 resize-none" placeholder="FOLLOW_UP_QUERY_" rows="1" style="min-width: 0; overflow-wrap: break-word;"></textarea>
+                <div id="active-mode-badge" class="relative z-10 flex items-center gap-1.5 px-3 py-1 border border-[var(--phosphor-green)]/30 rounded phosphor-glow text-[12px] uppercase tracking-[0.2em] opacity-70 whitespace-nowrap">
+                    <span id="badge-icon" class="material-symbols-outlined text-base">psychology</span>
+                    <span id="badge-label">Explain</span>
+                </div>
+                <button id="execute-btn" class="relative z-10 px-4 py-2 distressed-border rounded text-[12px] phosphor-glow uppercase tracking-[0.3em] hover:brightness-125 transition-all cursor-pointer">Execute</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status bar (always visible) -->
+    <div class="absolute bottom-0 left-0 right-0 h-10 border-t-4 border-[#2a2c2e] bg-[#1a1c1d] shadow-[0_-10px_30px_rgba(0,0,0,0.6)] flex items-center px-8 z-30">
+        <div class="text-[11px] text-slate-500 font-mono tracking-[0.3em] uppercase flex items-center gap-6">
+            <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> SYSTEM: NOMINAL</span>
+            <span class="opacity-40">|</span>
+            <span>SECURITY: LEVEL_4</span>
+            <span class="opacity-40">|</span>
+            <span class="text-amber-600/70">RADIATION_LEAK: 0.02% (WITHIN LIMITS)</span>
+        </div>
+    </div>
+</main>
+
+<!-- Texture overlays -->
+<div class="fixed inset-0 pointer-events-none z-50 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/dust.png')] mix-blend-screen"></div>
+<div class="fixed inset-0 pointer-events-none z-40 opacity-5 bg-[url('https://www.transparenttextures.com/patterns/scratched-metal.png')]"></div>
+
+<script>
+(function() {
+    const queryHistory = [];
+    let isResultsView = false;
+
+    // DOM elements
+    const commandInput = document.getElementById('command-input');
+    const resultsInput = document.getElementById('results-input');
+    const executeBtn = document.getElementById('execute-btn');
+    const operatorInput = document.getElementById('operator-input');
+    const processMonitor = document.getElementById('process-monitor');
+    const pipelineStatus = document.getElementById('pipeline-status');
+    const progressBar = document.getElementById('progress-bar');
+    const queryHistoryList = document.getElementById('query-history');
+    const idleView = document.getElementById('idle-view');
+    const resultsView = document.getElementById('results-view');
+    const resultsContent = document.getElementById('results-content');
+    const resultsTitle = document.getElementById('results-title');
+    const resultsStream = document.getElementById('results-stream');
+    const logoTitle = document.getElementById('logo-title');
+
+    // Blinking cursor — hide when input has content
+    const inputCursor = document.getElementById('input-cursor');
+    commandInput.addEventListener('input', function() {
+        inputCursor.style.display = this.value.length > 0 ? 'none' : '';
+    });
+
+    // Submit on Enter from sidebar input
+    commandInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && this.value.trim()) {
+            submitQuery(this.value.trim());
+            this.value = '';
+            inputCursor.style.display = 'none';
+        }
+    });
+
+    // Submit on Enter from results input (prevent newline in textarea)
+    resultsInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            if (this.value.trim()) {
+                submitQuery(this.value.trim());
+                this.value = '';
+                this.style.height = 'auto';
+            }
+        }
+    });
+
+    // Auto-resize textarea as user types
+    resultsInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = this.scrollHeight + 'px';
+    });
+
+    // Execute button
+    executeBtn.addEventListener('click', function() {
+        if (resultsInput.value.trim()) {
+            submitQuery(resultsInput.value.trim());
+            resultsInput.value = '';
+        }
+    });
+
+    // Logo click returns to idle
+    logoTitle.addEventListener('click', function() {
+        if (isResultsView) showIdleView();
+    });
+
+    // Red close button returns to idle
+    document.getElementById('close-results').addEventListener('click', function() {
+        showIdleView();
+    });
+
+    // Query card pool — 3 randomly selected on each load
+    const cardPool = [
+        { label: 'Deep Query', query: 'What does DGETRF do and what are its dependencies?', display: 'Explain DGETRF and its dependencies', sector: 'SRC_SCAN', icon: 'troubleshoot' },
+        { label: 'Object Linker', query: 'How do LAPACK routines call BLAS subroutines?', display: 'Map LAPACK to BLAS call graph', sector: 'BRIDGE_NET', icon: 'integration_instructions' },
+        { label: 'Heat Map', query: 'Which LAPACK routines are most computationally intensive?', display: 'Find most intensive routines', sector: 'VIS_ENGINE', icon: 'grid_view' },
+        { label: 'Solver Trace', query: 'Walk through how DGESV solves a system of linear equations step by step.', display: 'Trace DGESV solver pipeline', sector: 'SOLVE_CORE', icon: 'route' },
+        { label: 'Error Path', query: 'What error conditions does DGETRF check for and how does it report them?', display: 'Map DGETRF error handling', sector: 'ERR_TRACE', icon: 'bug_report' },
+        { label: 'Param Decode', query: 'Explain all parameters of DGESVD and their roles in SVD computation.', display: 'Decode DGESVD parameters', sector: 'PARAM_MAP', icon: 'data_object' },
+        { label: 'Legacy Port', query: 'How would you modernize DLANGE into idiomatic Python or C++?', display: 'Modernize DLANGE routine', sector: 'PORT_ENGINE', icon: 'swap_horiz' },
+        { label: 'Math Core', query: 'What mathematical algorithm does DGEEV implement for eigenvalue computation?', display: 'Explain DGEEV algorithm', sector: 'MATH_CORE', icon: 'functions' },
+        { label: 'Memory Map', query: 'How does LAPACK manage workspace arrays and memory allocation?', display: 'Map workspace allocation', sector: 'MEM_ALLOC', icon: 'memory' },
+        { label: 'Precision', query: 'What are the differences between single and double precision LAPACK routines?', display: 'Compare S vs D precision', sector: 'PREC_UNIT', icon: 'compare' },
+        { label: 'Block Ops', query: 'How does blocked algorithm optimization work in LAPACK matrix factorizations?', display: 'Explain block optimizations', sector: 'BLK_ENGINE', icon: 'view_module' },
+        { label: 'Test Suite', query: 'How does LAPACK validate numerical accuracy in its test suite?', display: 'Analyze test methodology', sector: 'QA_VERIFY', icon: 'verified' },
+    ];
+
+    function renderQueryCards() {
+        var shuffled = cardPool.slice().sort(function() { return Math.random() - 0.5; });
+        var picked = shuffled.slice(0, 3);
+        var container = document.getElementById('query-cards');
+        container.innerHTML = picked.map(function(card) {
+            return '<div class="crt-panel w-72 h-44 p-5 flex flex-col transform hover:scale-105 transition-transform cursor-pointer group" data-query="' + card.query.replace(/"/g, '&quot;') + '">' +
+                '<div class="text-[12px] phosphor-glow uppercase tracking-[0.3em] mb-3 border-b border-[var(--phosphor-green)]/20 pb-1">' + card.label + '</div>' +
+                '<p class="phosphor-glow text-xl font-mono leading-tight group-hover:brightness-125 transition-all">&gt; ' + card.display + '</p>' +
+                '<div class="mt-auto flex justify-between items-end opacity-40">' +
+                '<span class="text-[10px] font-mono">SECTOR: ' + card.sector + '</span>' +
+                '<span class="material-symbols-outlined text-base">' + card.icon + '</span>' +
+                '</div></div>';
+        }).join('');
+        // Bind click handlers
+        container.querySelectorAll('[data-query]').forEach(function(el) {
+            el.addEventListener('click', function() {
+                submitQuery(this.getAttribute('data-query'));
+            });
+        });
+    }
+
+    renderQueryCards();
+
+    // Mode selector (radio-style — one active at a time)
+    let activeMode = 'explain';
+    const featureAlerts = document.getElementById('feature-alerts');
+
+    const modeDescriptions = {
+        'explain': 'Explains code purpose, logic flow, and behavior in modern terms.',
+        'deps': 'Maps call chains, dependencies, and cross-routine relationships.',
+        'docs': 'Generates documentation with signatures, params, and usage examples.',
+        'business_logic': 'Extracts domain rules, constraints, and computational intent.'
+    };
+
+    // Set initial description
+    renderModeAlert();
+
+    document.querySelectorAll('.mode-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const mode = this.getAttribute('data-mode');
+            if (mode === activeMode) return;
+
+            // Deactivate all, activate clicked
+            document.querySelectorAll('.mode-btn').forEach(function(b) {
+                b.classList.remove('active');
+                b.querySelector('.mode-label').classList.add('opacity-50');
+            });
+            this.classList.add('active');
+            this.querySelector('.mode-label').classList.remove('opacity-50');
+            activeMode = mode;
+
+            // Update process monitor
+            renderModeAlert();
+        });
+    });
+
+    function renderModeAlert() {
+        var modeLabels = { 'explain': 'EXPLAIN', 'deps': 'DEPS', 'docs': 'DOCS', 'business_logic': 'LOGIC' };
+        var modeIcons = { 'explain': 'psychology', 'deps': 'hub', 'docs': 'description', 'business_logic': 'rule' };
+        featureAlerts.innerHTML = '<div class="flex items-center gap-2 mb-1"><span class="w-1.5 h-1.5 rounded-full bg-[var(--phosphor-green)] inline-block"></span> MODE: ' + modeLabels[activeMode] + '</div>' +
+            '<div class="opacity-60 text-[16px] leading-snug">' + modeDescriptions[activeMode] + '</div>';
+        // Update results bar badge
+        document.getElementById('badge-icon').textContent = modeIcons[activeMode];
+        document.getElementById('badge-label').textContent = modeLabels[activeMode];
+    }
+
+    function showIdleView() {
+        isResultsView = false;
+        resultsView.classList.add('hidden');
+        idleView.classList.remove('hidden');
+        idleView.classList.add('view-fade-enter');
+        setTimeout(() => idleView.classList.remove('view-fade-enter'), 300);
+        // Reset process monitor to idle (preserve query history)
+        processMonitor.classList.remove('hidden');
+        processMonitor.innerHTML = '<p class="leading-relaxed">"Scanning local subnets... Found 14 legacy clusters. Ready for injection, Operator."</p>';
+        pipelineStatus.classList.add('hidden');
+        operatorInput.innerHTML = '<span class="opacity-50">AWAITING OPERATOR INPUT...</span>';
+        // Restore input
+        unlockInput();
+    }
+
+    function lockInput() {
+        commandInput.disabled = true;
+        commandInput.value = '--LOCKED--';
+        commandInput.style.textAlign = 'center';
+        commandInput.style.fontSize = '1.625rem';
+        commandInput.style.color = '#ef4444';
+        commandInput.style.textShadow = '0 0 8px rgba(239, 68, 68, 0.6)';
+        inputCursor.style.display = 'none';
+    }
+
+    function unlockInput() {
+        commandInput.disabled = false;
+        commandInput.value = '';
+        commandInput.style.textAlign = '';
+        commandInput.style.fontSize = '';
+        commandInput.style.color = '';
+        commandInput.style.textShadow = '';
+        inputCursor.style.display = '';
+    }
+
+    function showResultsView() {
+        isResultsView = true;
+        lockInput();
+        idleView.classList.add('hidden');
+        resultsView.classList.remove('hidden');
+        resultsView.classList.add('view-fade-enter');
+        setTimeout(() => resultsView.classList.remove('view-fade-enter'), 300);
+    }
+
+    function updateOperatorInput(query) {
+        operatorInput.textContent = '"' + query + '"';
+    }
+
+    function updateQueryHistory() {
+        if (queryHistory.length === 0) return;
+        queryHistoryList.innerHTML = '';
+        queryHistory.slice().reverse().forEach(function(q, i) {
+            const li = document.createElement('li');
+            li.className = 'cursor-pointer hover:brightness-125 transition-all truncate';
+            li.textContent = '> ' + q;
+            li.title = q;
+            li.addEventListener('click', function() { submitQuery(q); });
+            queryHistoryList.appendChild(li);
+        });
+    }
+
+    async function animatePipeline() {
+        processMonitor.classList.add('hidden');
+        pipelineStatus.classList.remove('hidden');
+
+        const stageVector = document.getElementById('stage-vector');
+        const stageLlm = document.getElementById('stage-llm');
+        const stageRerank = document.getElementById('stage-rerank');
+
+        // Reset
+        stageVector.querySelector('span:last-child').textContent = 'STANDBY';
+        stageVector.querySelector('span:last-child').className = 'opacity-50';
+        stageLlm.querySelector('span:last-child').textContent = 'STANDBY';
+        stageLlm.querySelector('span:last-child').className = 'opacity-50';
+        stageRerank.querySelector('span:last-child').textContent = 'STANDBY';
+        stageRerank.querySelector('span:last-child').className = 'opacity-50';
+        progressBar.style.width = '0%';
+
+        // Stage 1: Vector search
+        stageVector.querySelector('span:last-child').textContent = 'ACTIVE';
+        stageVector.querySelector('span:last-child').className = 'text-yellow-400';
+        progressBar.style.width = '15%';
+
+        await delay(600);
+        stageVector.querySelector('span:last-child').textContent = 'COMPLETED';
+        stageVector.querySelector('span:last-child').className = '';
+        progressBar.style.width = '33%';
+
+        // Stage 2: LLM inference
+        stageLlm.querySelector('span:last-child').textContent = 'ACTIVE';
+        stageLlm.querySelector('span:last-child').className = 'text-yellow-400';
+        progressBar.style.width = '50%';
+
+        return { stageLlm, stageRerank };
+    }
+
+    function completePipeline(stages, elapsed) {
+        stages.stageLlm.querySelector('span:last-child').textContent = 'COMPLETED';
+        stages.stageLlm.querySelector('span:last-child').className = '';
+        progressBar.style.width = '80%';
+
+        stages.stageRerank.querySelector('span:last-child').textContent = elapsed.toFixed(2) + 'S';
+        stages.stageRerank.querySelector('span:last-child').className = '';
+        progressBar.style.width = '100%';
+    }
+
+    async function submitQuery(query) {
+        // Add to history (avoid duplicates at top)
+        const existingIdx = queryHistory.indexOf(query);
+        if (existingIdx !== -1) queryHistory.splice(existingIdx, 1);
+        queryHistory.push(query);
+        updateQueryHistory();
+
+        // Update operator input
+        updateOperatorInput(query);
+
+        // Switch to results view
+        if (!isResultsView) showResultsView();
+
+        // Show loading in results
+        resultsContent.innerHTML = '<p class="opacity-50 animate-pulse">Processing query...</p>';
+        resultsTitle.textContent = 'ROUTINE DATA: ---';
+        resultsStream.textContent = 'ENCRYPTED STREAM 0x' + Math.random().toString(16).substring(2, 6).toUpperCase();
+
+        // Animate pipeline
+        const stages = await animatePipeline();
+        const startTime = performance.now();
+
+        // Call API
+        try {
+            const res = await fetch('/query', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question: query, top_k: 5, mode: activeMode })
+            });
+
+            const elapsed = (performance.now() - startTime) / 1000;
+
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({ detail: 'Request failed' }));
+                completePipeline(stages, elapsed);
+                resultsContent.innerHTML = '<p class="text-red-500">ERROR: ' + escapeHtml(err.detail || 'Unknown error') + '</p>';
+                return;
+            }
+
+            const data = await res.json();
+            completePipeline(stages, elapsed);
+
+            // Update title with first chunk's unit name
+            if (data.chunks && data.chunks.length > 0) {
+                resultsTitle.textContent = 'ROUTINE DATA: ' + data.chunks[0].unit_name.toUpperCase();
+            }
+
+            // Render markdown answer
+            if (typeof marked !== 'undefined' && marked.parse) {
+                resultsContent.innerHTML = marked.parse(data.answer);
+            } else {
+                resultsContent.innerHTML = '<pre class="whitespace-pre-wrap">' + escapeHtml(data.answer) + '</pre>';
+            }
+        } catch (err) {
+            const elapsed = (performance.now() - startTime) / 1000;
+            completePipeline(stages, elapsed);
+            resultsContent.innerHTML = '<p class="text-red-500">CONNECTION ERROR: ' + escapeHtml(err.message) + '</p>';
+        }
+    }
+
+    function delay(ms) {
+        return new Promise(function(resolve) { setTimeout(resolve, ms); });
+    }
+
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+})();
+</script>
+</body></html>
