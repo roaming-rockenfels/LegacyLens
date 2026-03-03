@@ -442,6 +442,10 @@ body {
                 <div class="grime-overlay"></div>
                 <span class="phosphor-glow text-xl relative z-10">&gt;</span>
                 <input id="results-input" class="flex-1 bg-transparent border-none p-2 font-mono text-lg phosphor-glow focus:ring-0 placeholder:opacity-20 uppercase relative z-10" placeholder="FOLLOW_UP_QUERY_" type="text">
+                <div id="active-mode-badge" class="relative z-10 flex items-center gap-1.5 px-3 py-1 border border-[var(--phosphor-green)]/30 rounded phosphor-glow text-[12px] uppercase tracking-[0.2em] opacity-70 whitespace-nowrap">
+                    <span id="badge-icon" class="material-symbols-outlined text-base">psychology</span>
+                    <span id="badge-label">Explain</span>
+                </div>
                 <button id="execute-btn" class="relative z-10 px-4 py-2 distressed-border rounded text-[12px] phosphor-glow uppercase tracking-[0.3em] hover:brightness-125 transition-all cursor-pointer">Execute</button>
             </div>
         </div>
@@ -567,8 +571,12 @@ body {
 
     function renderModeAlert() {
         var modeLabels = { 'explain': 'EXPLAIN', 'deps': 'DEPS', 'docs': 'DOCS', 'business_logic': 'LOGIC' };
+        var modeIcons = { 'explain': 'psychology', 'deps': 'hub', 'docs': 'description', 'business_logic': 'rule' };
         featureAlerts.innerHTML = '<div class="flex items-center gap-2 mb-1"><span class="w-1.5 h-1.5 rounded-full bg-[var(--phosphor-green)] inline-block"></span> MODE: ' + modeLabels[activeMode] + '</div>' +
             '<div class="opacity-60 text-[16px] leading-snug">' + modeDescriptions[activeMode] + '</div>';
+        // Update results bar badge
+        document.getElementById('badge-icon').textContent = modeIcons[activeMode];
+        document.getElementById('badge-label').textContent = modeLabels[activeMode];
     }
 
     function showIdleView() {
