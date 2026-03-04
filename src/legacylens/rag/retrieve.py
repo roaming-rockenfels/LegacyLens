@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass, field
 
 from rich.console import Console
 from rich.table import Table
@@ -11,6 +12,25 @@ from legacylens.rag.embeddings import embed_query, _get_client as _get_voyage_cl
 from legacylens.rag.storage import query_vectors
 
 console = Console()
+
+
+@dataclass
+class RetrievalMetrics:
+    """Counters returned alongside retrieval results for instrumentation."""
+
+    entity_matches: int = 0
+    threshold_filtered: int = 0
+    variants_collapsed: int = 0
+    score_distribution: dict = field(default_factory=lambda: {"min": 0.0, "max": 0.0, "mean": 0.0})
+
+
+@dataclass
+class RetrievalResult:
+    """Wraps results list + metrics from a retrieval call."""
+
+    results: list[dict] = field(default_factory=list)
+    metrics: RetrievalMetrics = field(default_factory=RetrievalMetrics)
+
 
 # Minimum score threshold for non-entity results
 _MIN_SCORE_THRESHOLD = 0.45
@@ -145,14 +165,11 @@ def _rerank_results(question: str, results: list[dict], top_k: int) -> list[dict
         return results[:top_k]
 
 
-def retrieve(question: str, top_k: int = 5, pin_unit: str | None = None) -> list[dict]:
-    """Retrieve relevant code chunks for a natural language question.
+def retrieve_with_metrics(question: str, top_k: int = 5, pin_unit: str | None = None) -> RetrievalResult:
+    """Retrieve relevant code chunks with instrumentation metrics.
 
-    Uses two-pass retrieval:
-    1. Driver-filtered query to boost user-facing routines
-    2. Unfiltered semantic search for breadth
-
-    Results are diversified to avoid precision-variant clusters.
+    Same pipeline as retrieve(), but returns a RetrievalResult with
+    both the results list and a RetrievalMetrics object.
 
     Args:
         question: Natural language query about the codebase.
@@ -162,8 +179,9 @@ def retrieve(question: str, top_k: int = 5, pin_unit: str | None = None) -> list
                   remaining slots with semantic search.
 
     Returns:
-        List of match dicts with id, score, and metadata.
+        RetrievalResult with .results and .metrics.
     """
+    metrics = RetrievalMetrics()
     embedding = embed_query(question)
 
     if pin_unit:
@@ -185,7 +203,15 @@ def retrieve(question: str, top_k: int = 5, pin_unit: str | None = None) -> list
                 merged.append(r)
                 seen_ids.add(r["id"])
 
-        return merged
+        metrics.entity_matches = len(pinned)
+        if merged:
+            scores = [r.get("score", 0) for r in merged]
+            metrics.score_distribution = {
+                "min": min(scores),
+                "max": max(scores),
+                "mean": sum(scores) / len(scores),
+            }
+        return RetrievalResult(results=merged, metrics=metrics)
 
     # Entity-filtered pass: detect Fortran identifiers in the query
     # Uses dual queries (D-prefix + all-precision) to guarantee canonical results
@@ -263,13 +289,39 @@ def retrieve(question: str, top_k: int = 5, pin_unit: str | None = None) -> list
     # precision variants (e.g., DGETRF from entity tier + SGETRF from
     # non-entity tier). Non-entity results are not pre-diversified so the
     # final pass has enough candidates to backfill collapsed slots.
+    pre_diversify_count = len(diversified_entity + reranked_non_entity)
     combined = _diversify_results(diversified_entity + reranked_non_entity, top_k)
+    metrics.variants_collapsed = pre_diversify_count - len(combined)
 
     # Filter low-confidence results (entity matches bypass threshold)
-    return [
-        r for r in combined
+    pre_filter = combined
+    filtered = [
+        r for r in pre_filter
         if r.get("_entity_match") or r.get("score", 0) >= _MIN_SCORE_THRESHOLD
     ]
+    metrics.threshold_filtered = len(pre_filter) - len(filtered)
+
+    # Count entity matches in final results
+    metrics.entity_matches = sum(1 for r in filtered if r.get("_entity_match"))
+
+    # Score distribution from final results
+    if filtered:
+        scores = [r.get("score", 0) for r in filtered]
+        metrics.score_distribution = {
+            "min": min(scores),
+            "max": max(scores),
+            "mean": sum(scores) / len(scores),
+        }
+
+    return RetrievalResult(results=filtered, metrics=metrics)
+
+
+def retrieve(question: str, top_k: int = 5, pin_unit: str | None = None) -> list[dict]:
+    """Retrieve relevant code chunks for a natural language question.
+
+    Thin wrapper around retrieve_with_metrics() that returns only the results list.
+    """
+    return retrieve_with_metrics(question, top_k, pin_unit).results
 
 
 def format_results(results: list[dict], show_code: bool = False) -> None:
