@@ -1,0 +1,77 @@
+[
+  {
+    "query": "What does DGESV do?",
+    "expected_units": ["DGESV"],
+    "category": "entity-direct"
+  },
+  {
+    "query": "What does DGETRF do?",
+    "expected_units": ["DGETRF"],
+    "category": "entity-direct"
+  },
+  {
+    "query": "What does DGEEV do?",
+    "expected_units": ["DGEEV"],
+    "category": "entity-direct"
+  },
+  {
+    "query": "What routines call DGETRF?",
+    "expected_units": ["DGESV", "DGETRF"],
+    "category": "entity-callers"
+  },
+  {
+    "query": "What routines call DGETRS?",
+    "expected_units": ["DGESV", "DGETRS"],
+    "category": "entity-callers"
+  },
+  {
+    "query": "What routines call XERBLA?",
+    "expected_units": ["XERBLA"],
+    "category": "entity-callers"
+  },
+  {
+    "query": "What functions modify IPIV?",
+    "expected_units": ["DGETRF", "DGESV"],
+    "category": "parameter-based"
+  },
+  {
+    "query": "What routines use IPIV and NRHS?",
+    "expected_units": ["DGESV"],
+    "category": "parameter-based"
+  },
+  {
+    "query": "What does DGETRS do?",
+    "expected_units": ["DGETRS"],
+    "category": "entity-direct"
+  },
+  {
+    "query": "How does LAPACK solve linear equations?",
+    "expected_units": ["DGESV"],
+    "category": "semantic"
+  },
+  {
+    "query": "How does LAPACK compute LU factorization?",
+    "expected_units": ["DGETRF"],
+    "category": "semantic"
+  },
+  {
+    "query": "How does LAPACK compute eigenvalues?",
+    "expected_units": ["DGEEV"],
+    "category": "semantic"
+  },
+  {
+    "query": "How does LAPACK solve symmetric eigenvalue problems?",
+    "expected_units": ["DSYEV"],
+    "category": "semantic"
+  },
+  {
+    "query": "What does XERBLA do?",
+    "expected_units": ["XERBLA"],
+    "category": "utility"
+  },
+  {
+    "query": "What does ILAENV do?",
+    "expected_units": ["ILAENV"],
+    "category": "utility"
+  }
+]
