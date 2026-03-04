@@ -33,6 +33,9 @@ class ChunkResult(BaseModel):
     purpose: str
     parameters: list[str] = []
     calls: list[str] = []
+    start_line: int = 0
+    end_line: int = 0
+    snippet: str = ""
 
 
 class QueryResponse(BaseModel):
@@ -74,20 +77,31 @@ def query_codebase(req: QueryRequest):
 
     answer = generate_answer(req.question, results, mode=req.mode)
 
+    from legacylens.rag.source_reader import read_source_snippet
+
     chunks = []
     for match in results:
         meta = match.get("metadata", {})
+        fp = meta.get("file_path", "")
+        sl = meta.get("start_line", 0)
+        el = meta.get("end_line", 0)
+        snippet = ""
+        if isinstance(sl, int) and isinstance(el, int) and sl and el:
+            snippet = read_source_snippet(fp, sl, el)
         chunks.append(
             ChunkResult(
                 id=match["id"],
                 score=match["score"],
                 unit_name=meta.get("unit_name", ""),
                 unit_type=meta.get("unit_type", ""),
-                file_path=meta.get("file_path", ""),
+                file_path=fp,
                 language=meta.get("language", ""),
                 purpose=meta.get("purpose", ""),
                 parameters=meta.get("parameters", []),
                 calls=meta.get("calls", []),
+                start_line=sl if isinstance(sl, int) else 0,
+                end_line=el if isinstance(el, int) else 0,
+                snippet=snippet,
             )
         )
 

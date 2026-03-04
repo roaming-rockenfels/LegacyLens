@@ -153,6 +153,22 @@ body {
     animation: blink-cursor 1s step-end infinite;
 }
 
+@keyframes blink-dots {
+    0%   { content: '.'; }
+    25%  { content: '..'; }
+    50%  { content: '...'; }
+    75%  { content: '..'; }
+    100% { content: '.'; }
+}
+.dots-blink::after {
+    content: '.';
+    animation: blink-dots 1.2s step-end infinite;
+}
+
+#results-content {
+    text-shadow: 0 0 4px rgba(51, 255, 51, 0.4), 0 0 1px rgba(255, 255, 255, 0.3);
+}
+
 /* Results terminal markdown styling */
 #results-content h1, #results-content h2, #results-content h3,
 #results-content h4, #results-content h5, #results-content h6 {
@@ -175,7 +191,7 @@ body {
     background: rgba(51, 255, 51, 0.1);
     padding: 0.15em 0.4em;
     border-radius: 3px;
-    font-size: 0.95em;
+    font-size: 0.85em;
 }
 #results-content pre {
     background: rgba(0, 0, 0, 0.5);
@@ -264,20 +280,20 @@ body {
     <div class="crt-panel p-4 mb-4 flex-grow flex flex-col overflow-hidden">
         <div class="oil-smudge top-[-20px] left-[-20px]"></div>
         <div class="relative z-10 flex flex-col h-full overflow-hidden">
-            <span class="block mb-3 opacity-70 text-[12px] phosphor-glow uppercase tracking-widest border-b border-[var(--phosphor-green)]/30 pb-1">Process Monitor</span>
+            <span class="block mb-3 opacity-70 text-[16px] phosphor-glow uppercase tracking-widest border-b border-[var(--phosphor-green)]/30 pb-1">Process Monitor</span>
 
-            <div id="process-monitor" class="phosphor-glow text-xl font-mono mb-3">
-                <p class="leading-relaxed">"Scanning local subnets... Found 14 legacy clusters. Ready for injection, Operator."</p>
+            <div id="process-monitor" class="phosphor-glow text-2xl font-mono mb-3">
+                <p class="leading-relaxed">Scanning local subnets... Found 14 legacy clusters. LAPACK v3.x routines indexed. Ready for injection, Operator.</p>
             </div>
 
             <!-- Feature toggle alerts -->
-            <div id="feature-alerts" class="phosphor-glow text-lg font-mono space-y-1 mb-2"></div>
+            <div id="feature-alerts" class="phosphor-glow text-xl font-mono space-y-1 mb-2"></div>
 
             <!-- Pipeline status (hidden until query) -->
-            <div id="pipeline-status" class="hidden phosphor-glow text-lg font-mono space-y-1 mb-3">
+            <div id="pipeline-status" class="hidden phosphor-glow text-xl font-mono space-y-1 mb-3">
                 <div id="stage-vector" class="flex justify-between"><span>VECTOR SEARCH:</span><span class="opacity-50">STANDBY</span></div>
                 <div id="stage-llm" class="flex justify-between"><span>LLM INFERENCE:</span><span class="opacity-50">STANDBY</span></div>
-                <div id="stage-rerank" class="flex justify-between"><span>KNOWLEDGE RERANK:</span><span class="opacity-50">STANDBY</span></div>
+                <div id="stage-rerank" class="flex justify-between"><span>SIGNAL DECODE:</span><span class="opacity-50">STANDBY</span></div>
                 <div class="h-1.5 w-full bg-[var(--phosphor-green)]/10 rounded overflow-hidden mt-2">
                     <div id="progress-bar" class="h-full w-0 bg-[var(--phosphor-green)] shadow-[0_0_15px_var(--phosphor-green)] transition-all duration-500"></div>
                 </div>
@@ -285,8 +301,8 @@ body {
 
             <!-- Historical queries -->
             <div class="mt-auto border-t border-[var(--phosphor-green)]/20 pt-2 overflow-y-auto" style="max-height: 40%;">
-                <span class="block mb-1 opacity-50 text-[15px] phosphor-glow uppercase tracking-widest">Historical Queries</span>
-                <ul id="query-history" class="phosphor-glow text-xl space-y-1">
+                <span class="block mb-1 opacity-50 text-[19px] phosphor-glow uppercase tracking-widest">Historical Queries</span>
+                <ul id="query-history" class="phosphor-glow text-2xl space-y-1">
                     <li class="opacity-30 italic">No queries yet</li>
                 </ul>
             </div>
@@ -506,38 +522,66 @@ body {
         showIdleView();
     });
 
-    // Query card pool — 3 randomly selected on each load
-    const cardPool = [
-        { label: 'Deep Query', query: 'What does DGETRF do and what are its dependencies?', display: 'Explain DGETRF and its dependencies', sector: 'SRC_SCAN', icon: 'troubleshoot' },
-        { label: 'Object Linker', query: 'How do LAPACK routines call BLAS subroutines?', display: 'Map LAPACK to BLAS call graph', sector: 'BRIDGE_NET', icon: 'integration_instructions' },
-        { label: 'Heat Map', query: 'Which LAPACK routines are most computationally intensive?', display: 'Find most intensive routines', sector: 'VIS_ENGINE', icon: 'grid_view' },
-        { label: 'Solver Trace', query: 'Walk through how DGESV solves a system of linear equations step by step.', display: 'Trace DGESV solver pipeline', sector: 'SOLVE_CORE', icon: 'route' },
-        { label: 'Error Path', query: 'What error conditions does DGETRF check for and how does it report them?', display: 'Map DGETRF error handling', sector: 'ERR_TRACE', icon: 'bug_report' },
-        { label: 'Param Decode', query: 'Explain all parameters of DGESVD and their roles in SVD computation.', display: 'Decode DGESVD parameters', sector: 'PARAM_MAP', icon: 'data_object' },
-        { label: 'Legacy Port', query: 'How would you modernize DLANGE into idiomatic Python or C++?', display: 'Modernize DLANGE routine', sector: 'PORT_ENGINE', icon: 'swap_horiz' },
-        { label: 'Math Core', query: 'What mathematical algorithm does DGEEV implement for eigenvalue computation?', display: 'Explain DGEEV algorithm', sector: 'MATH_CORE', icon: 'functions' },
-        { label: 'Memory Map', query: 'How does LAPACK manage workspace arrays and memory allocation?', display: 'Map workspace allocation', sector: 'MEM_ALLOC', icon: 'memory' },
-        { label: 'Precision', query: 'What are the differences between single and double precision LAPACK routines?', display: 'Compare S vs D precision', sector: 'PREC_UNIT', icon: 'compare' },
-        { label: 'Block Ops', query: 'How does blocked algorithm optimization work in LAPACK matrix factorizations?', display: 'Explain block optimizations', sector: 'BLK_ENGINE', icon: 'view_module' },
-        { label: 'Test Suite', query: 'How does LAPACK validate numerical accuracy in its test suite?', display: 'Analyze test methodology', sector: 'QA_VERIFY', icon: 'verified' },
-    ];
+    // Query card pool — 3 per mode, 1 randomly selected per mode on each load
+    const cardPool = {
+        'explain': [
+            { label: 'Solver Trace', query: 'Walk through how DGESV solves a system of linear equations step by step.', display: 'Trace DGESV solver pipeline', sector: 'SOLVE_CORE', icon: 'route' },
+            { label: 'Math Core', query: 'What mathematical algorithm does DGEEV implement for eigenvalue computation?', display: 'Explain DGEEV algorithm', sector: 'MATH_CORE', icon: 'functions' },
+            { label: 'Block Ops', query: 'How does blocked algorithm optimization work in LAPACK matrix factorizations?', display: 'Explain block optimizations', sector: 'BLK_ENGINE', icon: 'view_module' },
+        ],
+        'deps': [
+            { label: 'Object Linker', query: 'How do LAPACK routines call BLAS subroutines?', display: 'Map LAPACK to BLAS call graph', sector: 'BRIDGE_NET', icon: 'integration_instructions' },
+            { label: 'Deep Query', query: 'What does DGETRF do and what are its dependencies?', display: 'Trace DGETRF dependencies', sector: 'SRC_SCAN', icon: 'troubleshoot' },
+            { label: 'Error Path', query: 'What error conditions does DGETRF check for and how does it report them?', display: 'Map DGETRF error chain', sector: 'ERR_TRACE', icon: 'bug_report' },
+        ],
+        'docs': [
+            { label: 'Param Decode', query: 'Explain all parameters of DGESVD and their roles in SVD computation.', display: 'Decode DGESVD parameters', sector: 'PARAM_MAP', icon: 'data_object' },
+            { label: 'Precision', query: 'What are the differences between single and double precision LAPACK routines?', display: 'Compare S vs D precision', sector: 'PREC_UNIT', icon: 'compare' },
+            { label: 'Memory Map', query: 'How does LAPACK manage workspace arrays and memory allocation?', display: 'Document workspace allocation', sector: 'MEM_ALLOC', icon: 'memory' },
+        ],
+        'business_logic': [
+            { label: 'Legacy Port', query: 'How would you modernize DLANGE into idiomatic Python or C++?', display: 'Modernize DLANGE routine', sector: 'PORT_ENGINE', icon: 'swap_horiz' },
+            { label: 'Heat Map', query: 'Which LAPACK routines are most computationally intensive and why?', display: 'Identify compute hotspots', sector: 'VIS_ENGINE', icon: 'grid_view' },
+            { label: 'Test Suite', query: 'How does LAPACK validate numerical accuracy in its test suite?', display: 'Extract test constraints', sector: 'QA_VERIFY', icon: 'verified' },
+        ],
+    };
+    const modeIcons = { 'explain': 'psychology', 'deps': 'hub', 'docs': 'description', 'business_logic': 'rule' };
 
     function renderQueryCards() {
-        var shuffled = cardPool.slice().sort(function() { return Math.random() - 0.5; });
-        var picked = shuffled.slice(0, 3);
+        var modes = ['explain', 'deps', 'docs', 'business_logic'];
+        var picked = modes.map(function(mode) {
+            var cards = cardPool[mode];
+            var card = cards[Math.floor(Math.random() * cards.length)];
+            return Object.assign({ mode: mode }, card);
+        });
+        // Show 3 cards — drop one random card
+        picked.splice(Math.floor(Math.random() * picked.length), 1);
         var container = document.getElementById('query-cards');
         container.innerHTML = picked.map(function(card) {
-            return '<div class="crt-panel w-72 h-44 p-5 flex flex-col transform hover:scale-105 transition-transform cursor-pointer group" data-query="' + card.query.replace(/"/g, '&quot;') + '">' +
-                '<div class="text-[12px] phosphor-glow uppercase tracking-[0.3em] mb-3 border-b border-[var(--phosphor-green)]/20 pb-1">' + card.label + '</div>' +
+            return '<div class="crt-panel w-72 h-44 p-5 flex flex-col transform hover:scale-105 transition-transform cursor-pointer group" data-query="' + card.query.replace(/"/g, '&quot;') + '" data-mode="' + card.mode + '">' +
+                '<div class="text-[12px] phosphor-glow uppercase tracking-[0.3em] mb-3 border-b border-[var(--phosphor-green)]/20 pb-1 flex items-center gap-2">' +
+                '<span class="material-symbols-outlined text-sm text-[var(--phosphor-green)]">' + modeIcons[card.mode] + '</span>' + card.label + '</div>' +
                 '<p class="phosphor-glow text-xl font-mono leading-tight group-hover:brightness-125 transition-all">&gt; ' + card.display + '</p>' +
                 '<div class="mt-auto flex justify-between items-end opacity-40">' +
                 '<span class="text-[10px] font-mono">SECTOR: ' + card.sector + '</span>' +
                 '<span class="material-symbols-outlined text-base">' + card.icon + '</span>' +
                 '</div></div>';
         }).join('');
-        // Bind click handlers
+        // Bind click handlers — set mode then run query
         container.querySelectorAll('[data-query]').forEach(function(el) {
             el.addEventListener('click', function() {
+                var mode = this.getAttribute('data-mode');
+                if (mode !== activeMode) {
+                    document.querySelectorAll('.mode-btn').forEach(function(b) {
+                        b.classList.remove('active');
+                        b.querySelector('.mode-label').classList.add('opacity-50');
+                    });
+                    var targetBtn = document.querySelector('.mode-btn[data-mode="' + mode + '"]');
+                    targetBtn.classList.add('active');
+                    targetBtn.querySelector('.mode-label').classList.remove('opacity-50');
+                    activeMode = mode;
+                    renderModeAlert();
+                }
                 submitQuery(this.getAttribute('data-query'));
             });
         });
@@ -580,9 +624,8 @@ body {
 
     function renderModeAlert() {
         var modeLabels = { 'explain': 'EXPLAIN', 'deps': 'DEPS', 'docs': 'DOCS', 'business_logic': 'LOGIC' };
-        var modeIcons = { 'explain': 'psychology', 'deps': 'hub', 'docs': 'description', 'business_logic': 'rule' };
         featureAlerts.innerHTML = '<div class="flex items-center gap-2 mb-1"><span class="w-1.5 h-1.5 rounded-full bg-[var(--phosphor-green)] inline-block"></span> MODE: ' + modeLabels[activeMode] + '</div>' +
-            '<div class="opacity-60 text-[16px] leading-snug">' + modeDescriptions[activeMode] + '</div>';
+            '<div class="opacity-60 text-[20px] leading-snug">' + modeDescriptions[activeMode] + '</div>';
         // Update results bar badge
         document.getElementById('badge-icon').textContent = modeIcons[activeMode];
         document.getElementById('badge-label').textContent = modeLabels[activeMode];
@@ -596,7 +639,7 @@ body {
         setTimeout(() => idleView.classList.remove('view-fade-enter'), 300);
         // Reset process monitor to idle (preserve query history)
         processMonitor.classList.remove('hidden');
-        processMonitor.innerHTML = '<p class="leading-relaxed">"Scanning local subnets... Found 14 legacy clusters. Ready for injection, Operator."</p>';
+        processMonitor.innerHTML = '<p class="leading-relaxed">Scanning local subnets... Found 14 legacy clusters. LAPACK v3.x routines indexed. Ready for injection, Operator.</p>';
         pipelineStatus.classList.add('hidden');
         operatorInput.innerHTML = '<span class="opacity-50">AWAITING OPERATOR INPUT...</span>';
         // Restore input
@@ -639,12 +682,26 @@ body {
     function updateQueryHistory() {
         if (queryHistory.length === 0) return;
         queryHistoryList.innerHTML = '';
-        queryHistory.slice().reverse().forEach(function(q, i) {
+        queryHistory.slice().reverse().forEach(function(entry, i) {
             const li = document.createElement('li');
-            li.className = 'cursor-pointer hover:brightness-125 transition-all truncate';
-            li.textContent = '> ' + q;
-            li.title = q;
-            li.addEventListener('click', function() { submitQuery(q); });
+            li.className = 'cursor-pointer hover:brightness-125 transition-all truncate flex items-center gap-1.5';
+            li.innerHTML = '<span class="material-symbols-outlined text-base flex-shrink-0">' + modeIcons[entry.mode] + '</span> ' + entry.query;
+            li.title = entry.query + ' [' + entry.mode.toUpperCase() + ']';
+            li.addEventListener('click', function() {
+                // Restore the original mode
+                if (entry.mode !== activeMode) {
+                    document.querySelectorAll('.mode-btn').forEach(function(b) {
+                        b.classList.remove('active');
+                        b.querySelector('.mode-label').classList.add('opacity-50');
+                    });
+                    var targetBtn = document.querySelector('.mode-btn[data-mode="' + entry.mode + '"]');
+                    targetBtn.classList.add('active');
+                    targetBtn.querySelector('.mode-label').classList.remove('opacity-50');
+                    activeMode = entry.mode;
+                    renderModeAlert();
+                }
+                submitQuery(entry.query);
+            });
             queryHistoryList.appendChild(li);
         });
     }
@@ -681,6 +738,11 @@ body {
         stageLlm.querySelector('span:last-child').className = 'text-yellow-400';
         progressBar.style.width = '50%';
 
+        // Stage 3: Rerank goes active with blinking dots
+        var rerankSpan = stageRerank.querySelector('span:last-child');
+        rerankSpan.textContent = '';
+        rerankSpan.className = 'text-yellow-400 dots-blink';
+
         return { stageLlm, stageRerank };
     }
 
@@ -689,16 +751,17 @@ body {
         stages.stageLlm.querySelector('span:last-child').className = '';
         progressBar.style.width = '80%';
 
-        stages.stageRerank.querySelector('span:last-child').textContent = elapsed.toFixed(2) + 'S';
-        stages.stageRerank.querySelector('span:last-child').className = '';
+        var rerankSpan = stages.stageRerank.querySelector('span:last-child');
+        rerankSpan.className = '';
+        rerankSpan.textContent = elapsed.toFixed(2) + 'S';
         progressBar.style.width = '100%';
     }
 
     async function submitQuery(query) {
         // Add to history (avoid duplicates at top)
-        const existingIdx = queryHistory.indexOf(query);
+        const existingIdx = queryHistory.findIndex(function(e) { return e.query === query; });
         if (existingIdx !== -1) queryHistory.splice(existingIdx, 1);
-        queryHistory.push(query);
+        queryHistory.push({ query: query, mode: activeMode });
         updateQueryHistory();
 
         // Update operator input
@@ -747,6 +810,7 @@ body {
             } else {
                 resultsContent.innerHTML = '<pre class="whitespace-pre-wrap">' + escapeHtml(data.answer) + '</pre>';
             }
+
         } catch (err) {
             const elapsed = (performance.now() - startTime) / 1000;
             completePipeline(stages, elapsed);
@@ -763,6 +827,8 @@ body {
         div.textContent = str;
         return div.innerHTML;
     }
+
+
 })();
 </script>
 </body></html>

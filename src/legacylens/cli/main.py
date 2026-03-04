@@ -64,6 +64,9 @@ def query(
     no_answer: bool = typer.Option(
         False, "--no-answer", help="Only show retrieved chunks, skip LLM answer"
     ),
+    show_code: bool = typer.Option(
+        False, "--show-code/--no-code", help="Show source code snippets in results"
+    ),
 ) -> None:
     """Ask a natural language question about the codebase."""
     from legacylens.rag.retrieve import retrieve, format_results
@@ -78,7 +81,7 @@ def query(
         console.print("[yellow]No results found. Have you ingested a codebase?[/]")
         raise typer.Exit(1)
 
-    format_results(results)
+    format_results(results, show_code=show_code)
 
     if no_answer:
         return
@@ -186,19 +189,12 @@ def view(
     data_dir: str = typer.Option(None, "--data-dir", "-d", help="Base directory of ingested codebase"),
 ) -> None:
     """View the full source of a file from query results."""
-    from legacylens.config import LAPACK_DATA_DIR
+    from legacylens.rag.source_reader import resolve_source_path
 
-    if data_dir:
-        base = Path(data_dir)
-    else:
-        base = LAPACK_DATA_DIR()
-
-    full_path = base / file_path
-    if not full_path.is_file():
-        full_path = base / "SRC" / file_path
-    if not full_path.is_file():
+    base = Path(data_dir) if data_dir else None
+    full_path = resolve_source_path(file_path, base_dir=base)
+    if full_path is None:
         console.print(f"[red]Error:[/] File not found: {file_path}")
-        console.print(f"  Tried: {base / file_path} and {base / 'SRC' / file_path}")
         raise typer.Exit(1)
 
     content = full_path.read_text(encoding="utf-8", errors="replace")
