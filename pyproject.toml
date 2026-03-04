@@ -30,6 +30,9 @@ legacylens = "legacylens.cli.main:app"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+legacylens = ["static/*.html"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
