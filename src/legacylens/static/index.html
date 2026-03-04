@@ -282,7 +282,7 @@ body {
         <div class="relative z-10 flex flex-col h-full overflow-hidden">
             <span class="block mb-3 opacity-70 text-[16px] phosphor-glow uppercase tracking-widest border-b border-[var(--phosphor-green)]/30 pb-1">Process Monitor</span>
 
-            <div id="process-monitor" class="phosphor-glow text-2xl font-mono mb-3">
+            <div id="process-monitor" class="phosphor-glow text-2xl font-mono mb-3 uppercase">
                 <p class="leading-relaxed">Scanning local subnets... Found 14 legacy clusters. LAPACK v3.x routines indexed. Ready for injection, Operator.</p>
             </div>
 
@@ -314,7 +314,7 @@ body {
         <div class="relative distressed-border rounded-md overflow-hidden p-1 input-cursor-wrap">
             <div class="grime-overlay opacity-30"></div>
             <span id="input-cursor" class="cursor-blink">_</span>
-            <input id="command-input" class="w-full bg-black/90 border-none p-3 font-mono text-xl phosphor-glow focus:ring-0 placeholder:opacity-0 uppercase relative z-10" placeholder="ENTER_QUERY_" type="text">
+            <input id="command-input" class="w-full bg-black/90 border-none p-3 font-mono text-xl phosphor-glow focus:ring-0 placeholder:opacity-0 relative z-10" placeholder="ENTER_QUERY_" type="text">
         </div>
         <p class="text-[11px] uppercase tracking-[0.25em] text-slate-600 font-bold px-2">Hardware-Link: CRITICAL_ASSET_MONITOR</p>
     </div>
@@ -480,9 +480,10 @@ body {
     // Submit on Enter from sidebar input
     commandInput.addEventListener('keydown', function(e) {
         if (e.key === 'Enter' && this.value.trim()) {
-            submitQuery(this.value.trim());
+            var query = this.value.trim();
             this.value = '';
             inputCursor.style.display = 'none';
+            submitQuery(query);
         }
     });
 
