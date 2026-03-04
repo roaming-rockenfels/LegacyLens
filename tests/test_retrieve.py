@@ -603,3 +603,33 @@ def test_format_results_no_crash(capsys):
 
     format_results([])
     format_results(MOCK_RESULTS)
+
+
+@patch("legacylens.rag.source_reader.read_source_snippet", return_value="      SUBROUTINE DGESV( N, NRHS )")
+def test_format_results_show_code(mock_snippet, capsys):
+    """format_results with show_code=True renders source snippets."""
+    from legacylens.rag.retrieve import format_results
+
+    format_results(MOCK_RESULTS, show_code=True)
+    mock_snippet.assert_called()
+    # read_source_snippet should be called for each result with valid start/end lines
+    assert mock_snippet.call_count >= 1
+
+
+@patch("legacylens.rag.source_reader.read_source_snippet", return_value="")
+def test_format_results_show_code_no_snippet(mock_snippet, capsys):
+    """format_results with show_code=True gracefully handles missing source."""
+    from legacylens.rag.retrieve import format_results
+
+    # Should not crash even if snippet returns empty
+    format_results(MOCK_RESULTS, show_code=True)
+
+
+def test_format_results_show_code_false(capsys):
+    """format_results with show_code=False does not attempt to read source."""
+    from legacylens.rag.retrieve import format_results
+
+    # Patch should NOT be called — we're passing show_code=False
+    with patch("legacylens.rag.source_reader.read_source_snippet") as mock_snippet:
+        format_results(MOCK_RESULTS, show_code=False)
+        mock_snippet.assert_not_called()

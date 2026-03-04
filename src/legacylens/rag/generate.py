@@ -7,6 +7,7 @@ import os
 import httpx
 
 from legacylens.config import OPENROUTER_API_KEY
+from legacylens.rag.source_reader import read_source_snippet
 
 # Default model — Haiku for speed/cost, upgrade to Sonnet for quality.
 DEFAULT_MODEL = "anthropic/claude-haiku-4.5"
@@ -51,6 +52,7 @@ Guidelines:
 - When describing algorithms, explain both what the code does and why.
 - Use clear, concise language appropriate for developers who may not know Fortran.
 - When relevant, mention the call chain (which routines call which).
+- When source code is provided in the context, quote relevant snippets in your answer using ```fortran code blocks. Include the most important lines that illustrate the logic being discussed — don't quote entire routines, just the key sections.
 """
 
 
@@ -78,6 +80,12 @@ Purpose: {purpose}
 Parameters: {', '.join(params) if params else 'none'}
 Calls: {', '.join(calls) if calls else 'none'}
 """
+        # Append actual source code when available
+        if isinstance(start_line, int) and isinstance(end_line, int):
+            snippet = read_source_snippet(file_path, start_line, end_line)
+            if snippet:
+                chunk_text += f"\nSource:\n```fortran\n{snippet}\n```\n"
+
         parts.append(chunk_text)
 
     return "\n".join(parts)

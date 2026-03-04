@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass, field
 
 from rich.console import Console
+from rich.syntax import Syntax
 from rich.table import Table
 
 from legacylens.rag.embeddings import embed_query, _get_client as _get_voyage_client
@@ -367,4 +368,22 @@ def format_results(results: list[dict], show_code: bool = False) -> None:
             table.add_row("Calls", ", ".join(calls[:10]))
 
         console.print(table)
+
+        if show_code:
+            from legacylens.rag.source_reader import read_source_snippet
+
+            sl = start_line if isinstance(start_line, int) else 0
+            el = end_line if isinstance(end_line, int) else 0
+            if sl and el:
+                snippet = read_source_snippet(file_path, sl, el)
+                if snippet:
+                    syntax = Syntax(
+                        snippet,
+                        "fortran",
+                        line_numbers=True,
+                        start_line=sl,
+                        theme="monokai",
+                    )
+                    console.print(syntax)
+
         console.print()
