@@ -104,6 +104,7 @@ ll query "what does DGETRF do?" -k 10 -m deps
 | `--top-k`, `-k` | `5` | Number of chunks to retrieve |
 | `--mode`, `-m` | `"explain"` | LLM response mode (see below) |
 | `--no-answer` | `False` | Show retrieved chunks only, skip the LLM call |
+| `--show-code` / `--no-code` | `False` | Show source code snippets with syntax highlighting and line numbers for each result |
 
 **Response modes** control the system prompt sent to Claude:
 
@@ -336,6 +337,36 @@ ll stats             → (no retrieval)    → (no LLM)         → rag/storage.
 ll serve             → (all of above)    → (all of above)   → api/server.py
 ```
 
+## Evaluation Script
+
+The retrieval evaluation script (`evals/eval_retrieval.py`) runs 15 golden queries against the live Pinecone index and reports per-query, per-category, and aggregate metrics.
+
+```bash
+# Baseline run (no PASS/FAIL gating)
+PYTHONPATH=src .venv/bin/python evals/eval_retrieval.py --threshold 0.0
+
+# With markdown output for README
+PYTHONPATH=src .venv/bin/python evals/eval_retrieval.py --threshold 0.0 --markdown
+
+# With end-to-end latency (retrieval + LLM generation)
+PYTHONPATH=src .venv/bin/python evals/eval_retrieval.py --threshold 0.0 --markdown --e2e
+```
+
+| Option | Default | Purpose |
+|--------|---------|---------|
+| `--golden` | `evals/golden_queries.json` | Path to golden query set JSON |
+| `--threshold` | `0.7` | Minimum aggregate recall for PASS (exit code 0) |
+| `--top-k` | per-query (default 5) | Override top_k for all queries |
+| `--no-cache` | `False` | Disable embedding cache (always call Voyage API) |
+| `--markdown` | `False` | Print a markdown-formatted category table suitable for pasting into README |
+| `--e2e` | `False` | Also measure end-to-end latency (retrieval + LLM generation per query) |
+
+**Metrics reported:** Precision@k, Recall@k, MRR (Mean Reciprocal Rank), Hit Rate, Retrieval Latency, and optionally E2E Latency.
+
+**Categories:** Queries are grouped by the `category` field in `golden_queries.json`: `entity-direct`, `entity-callers`, `parameter-based`, `semantic`, `utility`.
+
+**Embedding cache:** By default, embeddings are cached to `evals/.embedding_cache.json` to avoid repeated Voyage API calls for the same queries across runs.
+
 ## Key Files
 
 | File | Role |
@@ -348,4 +379,7 @@ ll serve             → (all of above)    → (all of above)   → api/server.p
 | `src/legacylens/rag/batch_ingest.py` | Batch ingestion pipeline (Voyage Batch API) |
 | `src/legacylens/rag/embeddings.py` | Voyage Code 3 client (embedding + reranking) |
 | `src/legacylens/rag/storage.py` | Pinecone client (query, upsert, stats, delete) |
+| `src/legacylens/rag/eval.py` | Retrieval evaluation library (precision, recall, MRR, hit rate, golden set loading) |
+| `evals/eval_retrieval.py` | Evaluation script with category breakdown, latency tracking, and markdown output |
+| `evals/golden_queries.json` | 15 golden queries across 5 categories |
 | `src/legacylens/config.py` | Environment variable loading |

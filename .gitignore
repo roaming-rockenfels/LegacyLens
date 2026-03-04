@@ -27,6 +27,9 @@ Thumbs.db
 # Data (cloned repos)
 data/
 
+# Eval cache
+evals/.embedding_cache.json
+
 # Claude
 .claude/
 
