@@ -120,7 +120,7 @@ def aggregate_metrics(per_query: list[dict]) -> dict:
     """
     if not per_query:
         return {}
-    keys = [k for k in per_query[0] if k != "query"]
+    keys = [k for k in per_query[0] if isinstance(per_query[0][k], (int, float))]
     return {k: sum(q[k] for q in per_query) / len(per_query) for k in keys}
 
 

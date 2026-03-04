@@ -14,13 +14,16 @@ Usage:
 from __future__ import annotations
 
 import argparse
+from collections import defaultdict
 import sys
+import time
 from pathlib import Path
 
 # Ensure project root is importable
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from legacylens.rag.embeddings import enable_embedding_cache, save_embedding_cache
+from legacylens.rag.generate import generate_answer
 from legacylens.rag.retrieve import retrieve_with_metrics
 from legacylens.rag.eval import (
     precision_at_k,
@@ -34,6 +37,97 @@ from legacylens.rag.eval import (
 
 EVALS_DIR = Path(__file__).resolve().parent
 DEFAULT_CACHE_PATH = EVALS_DIR / ".embedding_cache.json"
+
+CATEGORY_LABELS = {
+    "entity-direct": "Entity (direct)",
+    "entity-callers": "Entity (callers)",
+    "parameter-based": "Parameter-based",
+    "semantic": "Semantic",
+    "utility": "Utility",
+}
+
+# Preserve display order
+CATEGORY_ORDER = ["entity-direct", "entity-callers", "parameter-based", "semantic", "utility"]
+
+
+def format_category_report(per_query_with_category: list[dict]) -> str:
+    """Format a per-category summary table."""
+    by_cat: dict[str, list[dict]] = defaultdict(list)
+    for entry in per_query_with_category:
+        by_cat[entry["category"]].append(entry)
+
+    has_e2e = "e2e_ms" in per_query_with_category[0]
+    e2e_header = " {'E2E':>10}" if has_e2e else ""
+
+    lines: list[str] = []
+    header = f"\n{'Category':<20} {'Queries':>8} {'Precision':>10} {'Recall':>10} {'MRR':>10} {'Hit Rate':>10} {'Retrieval':>10}"
+    if has_e2e:
+        header += f" {'E2E':>10}"
+    lines.append(header)
+    lines.append("-" * (90 if has_e2e else 80))
+
+    for cat_key in CATEGORY_ORDER:
+        if cat_key not in by_cat:
+            continue
+        entries = by_cat[cat_key]
+        agg = aggregate_metrics(entries)
+        label = CATEGORY_LABELS.get(cat_key, cat_key)
+        line = (
+            f"{label:<20} {len(entries):>8} {agg['precision']:>10.3f} {agg['recall']:>10.3f} "
+            f"{agg['mrr']:>10.3f} {agg['hit_rate']:>10.3f} {agg['latency_ms']:>8.0f}ms"
+        )
+        if has_e2e:
+            line += f" {agg['e2e_ms']:>8.0f}ms"
+        lines.append(line)
+
+    overall = aggregate_metrics(per_query_with_category)
+    lines.append("-" * (90 if has_e2e else 80))
+    line = (
+        f"{'Overall':<20} {len(per_query_with_category):>8} {overall['precision']:>10.3f} {overall['recall']:>10.3f} "
+        f"{overall['mrr']:>10.3f} {overall['hit_rate']:>10.3f} {overall['latency_ms']:>8.0f}ms"
+    )
+    if has_e2e:
+        line += f" {overall['e2e_ms']:>8.0f}ms"
+    lines.append(line)
+    return "\n".join(lines)
+
+
+def format_category_markdown(per_query_with_category: list[dict], top_k: int = 5) -> str:
+    """Format a markdown table of per-category results for README."""
+    by_cat: dict[str, list[dict]] = defaultdict(list)
+    for entry in per_query_with_category:
+        by_cat[entry["category"]].append(entry)
+
+    has_e2e = "e2e_ms" in per_query_with_category[0]
+
+    lines: list[str] = []
+    lines.append(f"Retrieval quality evaluated against {len(per_query_with_category)} golden queries across {len(by_cat)} categories (top-k={top_k}):")
+    lines.append("")
+    header = f"| Category | Queries | Precision@{top_k} | Recall@{top_k} | MRR | Hit Rate | Retrieval (ms) |"
+    sep = "|---|---|---|---|---|---|---|"
+    if has_e2e:
+        header += " E2E (ms) |"
+        sep += "---|"
+    lines.append(header)
+    lines.append(sep)
+
+    for cat_key in CATEGORY_ORDER:
+        if cat_key not in by_cat:
+            continue
+        entries = by_cat[cat_key]
+        agg = aggregate_metrics(entries)
+        label = CATEGORY_LABELS.get(cat_key, cat_key)
+        row = f"| {label} | {len(entries)} | {agg['precision']:.2f} | {agg['recall']:.2f} | {agg['mrr']:.2f} | {agg['hit_rate']:.2f} | {agg['latency_ms']:.0f} |"
+        if has_e2e:
+            row += f" {agg['e2e_ms']:.0f} |"
+        lines.append(row)
+
+    overall = aggregate_metrics(per_query_with_category)
+    row = f"| **Overall** | **{len(per_query_with_category)}** | **{overall['precision']:.2f}** | **{overall['recall']:.2f}** | **{overall['mrr']:.2f}** | **{overall['hit_rate']:.2f}** | **{overall['latency_ms']:.0f}** |"
+    if has_e2e:
+        row += f" **{overall['e2e_ms']:.0f}** |"
+    lines.append(row)
+    return "\n".join(lines)
 
 
 def main() -> int:
@@ -60,6 +154,16 @@ def main() -> int:
         action="store_true",
         help="Disable embedding cache (always call Voyage API)",
     )
+    parser.add_argument(
+        "--markdown",
+        action="store_true",
+        help="Print markdown-formatted category table (for README)",
+    )
+    parser.add_argument(
+        "--e2e",
+        action="store_true",
+        help="Also measure end-to-end latency (retrieval + LLM generation)",
+    )
     args = parser.parse_args()
 
     if not args.no_cache:
@@ -75,25 +179,49 @@ def main() -> int:
         expected = set(entry["expected_units"])
         top_k = args.top_k if args.top_k is not None else entry.get("top_k", 5)
 
+        t0 = time.perf_counter()
         result = retrieve_with_metrics(query, top_k=top_k)
+        latency_ms = (time.perf_counter() - t0) * 1000
+
+        e2e_ms = None
+        if args.e2e:
+            t1 = time.perf_counter()
+            generate_answer(query, result.results)
+            e2e_ms = (time.perf_counter() - t0) * 1000  # from retrieval start
+
         retrieved_names = [
             r.get("metadata", {}).get("unit_name", "") for r in result.results
         ]
 
-        per_query.append({
+        row: dict = {
             "query": query,
+            "category": entry.get("category", "unknown"),
             "precision": precision_at_k(expected, retrieved_names, k=top_k),
             "recall": recall_at_k(expected, retrieved_names, k=top_k),
             "mrr": mrr(expected, retrieved_names),
             "hit_rate": hit_rate(expected, retrieved_names, k=top_k),
-        })
+            "latency_ms": latency_ms,
+        }
+        if e2e_ms is not None:
+            row["e2e_ms"] = e2e_ms
+        per_query.append(row)
 
     if not args.no_cache:
         save_embedding_cache()
 
+    # Per-query report (existing)
     agg = aggregate_metrics(per_query)
     report = format_report(per_query, agg, threshold=args.threshold)
     print(report)
+
+    # Category breakdown
+    print(format_category_report(per_query))
+
+    # Markdown output
+    if args.markdown:
+        effective_top_k = args.top_k if args.top_k is not None else 5
+        print("\n--- Markdown for README ---\n")
+        print(format_category_markdown(per_query, top_k=effective_top_k))
 
     if agg.get("recall", 0.0) < args.threshold:
         return 1
