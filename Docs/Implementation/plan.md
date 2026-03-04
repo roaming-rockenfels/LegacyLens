@@ -1,7 +1,7 @@
 # Implementation Plan
 
 ## Overview
-LegacyLens is a CLI-first RAG tool that makes the LAPACK Fortran library queryable via natural language. Built with Python/FastAPI, Voyage Code 2 embeddings, Pinecone vector DB, and Claude Haiku 4.5 for answer generation. Deployed on Fly.io with Swagger UI for web demo. Designed with a pluggable chunker interface for future COBOL support and MCP server upgrade path.
+LegacyLens is a CLI-first RAG tool that makes the LAPACK Fortran library queryable via natural language. Built with Python/FastAPI, Voyage Code 3 embeddings, Pinecone vector DB, and Claude Haiku 4.5 for answer generation. Deployed on Fly.io with Swagger UI for web demo. Designed with a pluggable chunker interface for future COBOL support and MCP server upgrade path.
 
 **Timeline:** MVP in 24 hours, Final in 48 hours.
 
@@ -21,10 +21,10 @@ LegacyLens is a CLI-first RAG tool that makes the LAPACK Fortran library queryab
 - **Target:** Hours 0-6
 
 ### M2: Embedding + Pinecone Storage
-- **Scope:** Set up Pinecone index. Integrate Voyage Code 2 SDK. Build ingestion pipeline: chunks → embeddings → Pinecone upsert with metadata. Run full LAPACK ingestion.
+- **Scope:** Set up Pinecone index. Integrate Voyage Code 3 SDK. Build ingestion pipeline: chunks → embeddings → Pinecone upsert with metadata. Run full LAPACK ingestion.
 - **Acceptance Criteria:**
-  - [ ] Pinecone index created with correct dimension (1536) and metadata schema
-  - [ ] Voyage Code 2 embeds chunks in batches (128 per call)
+  - [ ] Pinecone index created with correct dimension (1024) and metadata schema
+  - [ ] Voyage Code 3 embeds chunks in batches (128 per call for batch API; 3 per call for real-time with rate limit)
   - [ ] All LAPACK chunks upserted to Pinecone with metadata
   - [ ] 100% file coverage verified
   - [ ] Ingestion completes in <5 minutes for 10K+ LOC
@@ -35,7 +35,7 @@ LegacyLens is a CLI-first RAG tool that makes the LAPACK Fortran library queryab
 ### M3: Retrieval Pipeline + Basic CLI
 - **Scope:** Build the core retrieval function (embed query → Pinecone search → assemble context). Create CLI with typer for natural language queries. Display results with code snippets, file/line refs, and relevance scores.
 - **Acceptance Criteria:**
-  - [ ] Query embedding uses same Voyage Code 2 model
+  - [ ] Query embedding uses same Voyage Code 3 model
   - [ ] Top-k retrieval returns ranked chunks with similarity scores
   - [ ] CLI accepts natural language input, displays formatted results
   - [ ] Results show: code snippet, file path, line numbers, relevance score
@@ -122,7 +122,7 @@ flowchart LR
 |-------|--------|-------------|
 | Codebase | LAPACK (Fortran) | Docs/Presearch/Q1_requirements_scope.md |
 | Backend | Python / FastAPI | Docs/Presearch/Q1_requirements_scope.md |
-| Embeddings | Voyage Code 2 (1536 dim) | Docs/Presearch/Q2_embedding_model.md |
+| Embeddings | Voyage Code 3 (1024 dim) | Docs/Presearch/Q2_embedding_model.md |
 | Vector DB | Pinecone (managed, free tier) | Docs/Presearch/Q1_requirements_scope.md |
 | LLM | Claude Haiku 4.5 | Docs/Presearch/Q2_llm_answer_generation.md |
 | Framework | Custom pipeline (no framework) | Docs/Presearch/Q2_rag_framework.md |

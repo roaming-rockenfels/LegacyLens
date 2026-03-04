@@ -12,7 +12,7 @@ The custom pipeline was chosen over framework alternatives because LAPACK requir
 
 **Pinecone** (managed, serverless) was selected for:
 
-- **Zero ops:** No provisioning, scaling, or backup management — critical for a 1-week sprint.
+- **Zero ops:** No provisioning, scaling, or backup management — critical for a 2-day sprint.
 - **Metadata filtering:** Native support for filtering on structured fields (unit_name, precision, routine_role, calls, parameters) during vector search. This powers the entity-filtered retrieval tier.
 - **Free tier:** Sufficient for LAPACK's ~1,850 vectors at 1024 dimensions.
 
@@ -117,7 +117,7 @@ Retrieved chunks carry `file_path`, `start_line`, and `end_line` metadata. A sha
 Source code is integrated at three levels:
 
 1. **LLM Context:** `build_context()` appends the actual Fortran source to each chunk's metadata block, giving the LLM real code to reason about (not just metadata summaries).
-2. **CLI Output:** `format_results()` renders syntax-highlighted Fortran snippets with Rich when `--show-code` is enabled (default).
+2. **CLI Output:** `format_results()` renders syntax-highlighted Fortran snippets with Rich when `--show-code` is passed (off by default).
 3. **API Response:** The `/query` endpoint returns `start_line`, `end_line`, and `snippet` fields on each `ChunkResult`.
 
 Path resolution tries `base/file_path` then `base/SRC/file_path` (matching LAPACK's directory structure). All source reading degrades gracefully — returning empty strings on failure, never raising exceptions.
