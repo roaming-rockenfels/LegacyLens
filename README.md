@@ -121,14 +121,14 @@ Tests cover chunking against real LAPACK files, API endpoints, retrieval pipelin
 
 Retrieval quality evaluated against 15 golden queries across 5 categories (top-k=5):
 
-| Category | Queries | Precision@5 | Recall@5 | MRR | Hit Rate | Retrieval (ms) | E2E (ms) |
+| Category | Queries | Precision@5 | Recall@5 | MRR | Hit Rate | Retrieval (ms) | TTFS (ms) |
 |---|---|---|---|---|---|---|---|
-| Entity (direct) | 4 | 0.20 | 1.00 | 1.00 | 1.00 | 1138 | 8795 |
-| Entity (callers) | 3 | 0.33 | 1.00 | 0.78 | 1.00 | 560 | 6991 |
-| Parameter-based | 2 | 0.20 | 0.75 | 1.00 | 1.00 | 515 | 8165 |
-| Semantic | 4 | 0.20 | 1.00 | 0.83 | 1.00 | 565 | 13300 |
-| Utility | 2 | 0.20 | 1.00 | 1.00 | 1.00 | 682 | 10332 |
-| **Overall** | **15** | **0.23** | **0.97** | **0.91** | **1.00** | **726** | **9756** |
+| Entity (direct) | 4 | 0.20 | 1.00 | 1.00 | 1.00 | 932 | 2064 |
+| Entity (callers) | 3 | 0.33 | 1.00 | 0.78 | 1.00 | 459 | 1280 |
+| Parameter-based | 2 | 0.20 | 0.75 | 0.42 | 1.00 | 460 | 1816 |
+| Semantic | 4 | 0.20 | 1.00 | 0.48 | 1.00 | 329 | 1976 |
+| Utility | 2 | 0.20 | 1.00 | 0.67 | 1.00 | 470 | 1783 |
+| **Overall** | **15** | **0.23** | **0.97** | **0.69** | **1.00** | **552** | **1813** |
 
 **Note: Precision is low (0.20–0.33) as expected since most queries have only 1–2 expected units in top-5**
 
