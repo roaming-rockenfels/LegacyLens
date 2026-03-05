@@ -251,13 +251,19 @@ body {
 .progress-animate {
     animation: progress-fill 3s ease-in-out;
 }
+
+/* Small-container flag labels: hide text, show icon only */
+@container sidebar (max-width: 420px) {
+    .flag-label-full { display: none !important; }
+    .flag-divider { display: none !important; }
+}
 </style>
 </head>
 <body class="h-screen flex">
 <div class="scanlines"></div>
 
 <!-- LEFT SIDEBAR -->
-<aside class="w-1/3 h-full sidebar-texture border-r-8 border-[#3a3c3e] flex flex-col p-6 z-20 relative shadow-2xl overflow-hidden">
+<aside class="w-1/3 h-full sidebar-texture border-r-8 border-[#3a3c3e] flex flex-col p-6 z-20 relative shadow-2xl overflow-hidden" style="container-type: inline-size; container-name: sidebar;">
 
     <!-- Box 1: OPERATOR INPUT -->
     <div class="distressed-border p-4 mb-4 rounded-lg">
@@ -341,17 +347,26 @@ body {
 
     <!-- Query Flags — single row -->
     <div class="mt-2 flex-shrink-0 distressed-border rounded px-3 py-1.5 flex items-center justify-between" style="overflow: visible;">
-        <span class="phosphor-glow text-[11px] uppercase tracking-wider relative z-10 flex items-center justify-center gap-2" style="flex: 0 0 40%;">--top-k <span class="opacity-50">(# results)</span><input id="flag-top-k" type="number" min="1" max="20" value="5" class="w-10 bg-black/80 border border-[var(--phosphor-green)]/30 rounded px-1 py-0.5 text-center font-mono text-[11px] phosphor-glow focus:ring-0 focus:border-[var(--phosphor-green)]/60"></span>
-        <span class="opacity-30 text-[var(--phosphor-green)]">|</span>
+        <!-- --top-k -->
+        <span class="phosphor-glow text-[11px] uppercase tracking-wider relative z-10 flex items-center justify-center gap-2" style="flex: 0 0 40%;">
+            <span class="material-symbols-outlined text-[var(--phosphor-green)] text-sm flag-icon">filter_list</span>
+            <span class="flag-label-full">--top-k <span class="opacity-50">(# results)</span></span>
+            <input id="flag-top-k" type="number" min="1" max="20" value="5" class="w-10 bg-black/80 border border-[var(--phosphor-green)]/30 rounded px-1 py-0.5 text-center font-mono text-[11px] phosphor-glow focus:ring-0 focus:border-[var(--phosphor-green)]/60">
+        </span>
+        <span class="flag-divider opacity-30 text-[var(--phosphor-green)]">|</span>
+        <!-- --no-answer -->
         <span id="toggle-no-answer" class="relative z-10 flex items-center justify-center gap-1.5 cursor-pointer phosphor-glow text-[11px] uppercase tracking-wider">
-            <span>--no-answer</span>
+            <span class="material-symbols-outlined text-[var(--phosphor-green)] text-sm flag-icon">speed</span>
+            <span class="flag-label-full">--no-answer</span>
             <div class="w-8 h-4 rounded-full relative flex-shrink-0" style="background: #1a1c1d; border: 1px solid #3d3f41;">
                 <div id="thumb-no-answer" class="w-3 h-3 rounded-full absolute top-0.5 transition-all duration-150" style="left: 2px; background: #555;"></div>
             </div>
         </span>
-        <span class="opacity-30 text-[var(--phosphor-green)]">|</span>
+        <span class="flag-divider opacity-30 text-[var(--phosphor-green)]">|</span>
+        <!-- --show-code -->
         <span id="toggle-show-code" class="relative z-10 flex items-center justify-center gap-1.5 cursor-pointer phosphor-glow text-[11px] uppercase tracking-wider">
-            <span>--show-code</span>
+            <span class="material-symbols-outlined text-[var(--phosphor-green)] text-sm flag-icon">code</span>
+            <span class="flag-label-full">--show-code</span>
             <div class="w-8 h-4 rounded-full relative flex-shrink-0" style="background: #1a1c1d; border: 1px solid #3d3f41;">
                 <div id="thumb-show-code" class="w-3 h-3 rounded-full absolute top-0.5 transition-all duration-150" style="left: 2px; background: #555;"></div>
             </div>
