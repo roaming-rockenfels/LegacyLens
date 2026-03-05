@@ -699,13 +699,9 @@ body {
         document.getElementById('badge-label').textContent = modeLabels[activeMode];
     }
 
-    var _userNearBottom = false;
+    var _streamingAutoScroll = false;
     var _scrollContainer = null;
-
-    function _isNearBottom(el) {
-        // Consider "near bottom" if within 80px of the end
-        return el.scrollTop + el.clientHeight >= el.scrollHeight - 80;
-    }
+    var _isStreaming = false;
 
     function renderConversation() {
         var html = '';
@@ -725,18 +721,29 @@ body {
             html += '</div>';
         });
         resultsContent.innerHTML = html;
-        // Auto-scroll if the user is near the bottom (they've caught up to the stream)
         if (!_scrollContainer) _scrollContainer = resultsContent.parentElement;
-        if (_userNearBottom || _isNearBottom(_scrollContainer)) {
+        if (_streamingAutoScroll) {
             _scrollContainer.scrollTop = _scrollContainer.scrollHeight;
         }
     }
 
-    // Track whether user has scrolled near bottom
+    // When user scrolls during streaming and reaches near the bottom, engage auto-scroll
     setTimeout(function() {
         _scrollContainer = resultsContent.parentElement;
+        var _lastScrollTop = 0;
         _scrollContainer.addEventListener('scroll', function() {
-            _userNearBottom = _isNearBottom(_scrollContainer);
+            if (!_isStreaming) return;
+            var st = _scrollContainer.scrollTop;
+            // Any upward scroll immediately disengages auto-scroll
+            if (st < _lastScrollTop) {
+                _streamingAutoScroll = false;
+            }
+            // Only re-engage when user is within 20px of the very bottom
+            if (!_streamingAutoScroll) {
+                var atBottom = st + _scrollContainer.clientHeight >= _scrollContainer.scrollHeight - 20;
+                if (atBottom) _streamingAutoScroll = true;
+            }
+            _lastScrollTop = st;
         });
     }, 0);
 
@@ -902,7 +909,8 @@ body {
         // Push pending pair and render loading state
         var pairIdx = conversationPairs.length;
         conversationPairs.push({ question: query, answer: null, error: false });
-        _userNearBottom = true;  // scroll to new question on submit
+        _streamingAutoScroll = false;
+        _isStreaming = false;
         renderConversation();
 
         // Set title to truncated first question
@@ -987,11 +995,13 @@ body {
                                 var ttft = (performance.now() - startTime) / 1000;
                                 completePipeline(stages, ttft);
                                 pipelineCompleted = true;
+                                _isStreaming = true;
                             }
                             fullAnswer += evt.content;
                             conversationPairs[pairIdx].answer = fullAnswer;
                             scheduleRender();
                         } else if (evt.type === 'done') {
+                            _isStreaming = false;
                             if (!pipelineCompleted) {
                                 var elapsed2 = (performance.now() - startTime) / 1000;
                                 completePipeline(stages, elapsed2);
