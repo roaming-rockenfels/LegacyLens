@@ -251,13 +251,19 @@ body {
 .progress-animate {
     animation: progress-fill 3s ease-in-out;
 }
+
+/* Small-container flag labels: hide text, show icon only */
+@container sidebar (max-width: 420px) {
+    .flag-label-full { display: none !important; }
+    .flag-divider { display: none !important; }
+}
 </style>
 </head>
 <body class="h-screen flex">
 <div class="scanlines"></div>
 
 <!-- LEFT SIDEBAR -->
-<aside class="w-1/3 h-full sidebar-texture border-r-8 border-[#3a3c3e] flex flex-col p-6 z-20 relative shadow-2xl">
+<aside class="w-1/3 h-full sidebar-texture border-r-8 border-[#3a3c3e] flex flex-col p-6 z-20 relative shadow-2xl overflow-hidden" style="container-type: inline-size; container-name: sidebar;">
 
     <!-- Box 1: OPERATOR INPUT -->
     <div class="distressed-border p-4 mb-4 rounded-lg">
@@ -277,7 +283,7 @@ body {
     </div>
 
     <!-- Box 2: PROCESS MONITOR -->
-    <div class="crt-panel p-4 mb-4 flex-grow flex flex-col overflow-hidden">
+    <div class="crt-panel p-4 mb-4 flex-1 min-h-0 flex flex-col overflow-hidden">
         <div class="oil-smudge top-[-20px] left-[-20px]"></div>
         <div class="relative z-10 flex flex-col h-full overflow-hidden">
             <span class="block mb-3 opacity-70 text-[16px] phosphor-glow uppercase tracking-widest border-b border-[var(--phosphor-green)]/30 pb-1">Process Monitor</span>
@@ -310,7 +316,7 @@ body {
     </div>
 
     <!-- Box 3: Command Input -->
-    <div class="space-y-3">
+    <div class="flex-shrink-0 space-y-2">
         <div class="relative distressed-border rounded-md overflow-hidden p-1 input-cursor-wrap">
             <div class="grime-overlay opacity-30"></div>
             <span id="input-cursor" class="cursor-blink">_</span>
@@ -320,23 +326,51 @@ body {
     </div>
 
     <!-- Mode selector buttons (radio-style, one active at a time) -->
-    <div class="mt-4 grid grid-cols-4 gap-3 relative">
+    <div class="mt-3 grid grid-cols-4 gap-2 relative flex-shrink-0">
         <div class="mode-btn active aspect-square distressed-border rounded flex flex-col items-center justify-center hover:brightness-125 cursor-pointer gap-1" data-mode="explain" title="Explain code purpose, logic, and behavior">
             <span class="material-symbols-outlined text-[var(--phosphor-green)] text-2xl">psychology</span>
-            <span class="mode-label text-[14px] phosphor-glow uppercase tracking-wider relative z-10">Explain</span>
+            <span class="mode-label text-[13px] phosphor-glow uppercase tracking-wider relative z-10">Explain</span>
         </div>
         <div class="mode-btn aspect-square distressed-border rounded flex flex-col items-center justify-center hover:brightness-125 cursor-pointer gap-1" data-mode="deps" title="Map dependencies and call chains">
             <span class="material-symbols-outlined text-[var(--phosphor-green)] text-2xl">hub</span>
-            <span class="mode-label text-[14px] phosphor-glow uppercase tracking-wider opacity-50 relative z-10">Deps</span>
+            <span class="mode-label text-[13px] phosphor-glow uppercase tracking-wider opacity-50 relative z-10">Deps</span>
         </div>
         <div class="mode-btn aspect-square distressed-border rounded flex flex-col items-center justify-center hover:brightness-125 cursor-pointer gap-1" data-mode="docs" title="Generate modern documentation with params and examples">
             <span class="material-symbols-outlined text-[var(--phosphor-green)] text-2xl">description</span>
-            <span class="mode-label text-[14px] phosphor-glow uppercase tracking-wider opacity-50 relative z-10">Docs</span>
+            <span class="mode-label text-[13px] phosphor-glow uppercase tracking-wider opacity-50 relative z-10">Docs</span>
         </div>
         <div class="mode-btn aspect-square distressed-border rounded flex flex-col items-center justify-center hover:brightness-125 cursor-pointer gap-1" data-mode="business_logic" title="Extract business rules and domain logic">
             <span class="material-symbols-outlined text-[var(--phosphor-green)] text-2xl">rule</span>
-            <span class="mode-label text-[14px] phosphor-glow uppercase tracking-wider opacity-50 relative z-10">Logic</span>
+            <span class="mode-label text-[13px] phosphor-glow uppercase tracking-wider opacity-50 relative z-10">Logic</span>
         </div>
+    </div>
+
+    <!-- Query Flags — single row -->
+    <div class="mt-2 flex-shrink-0 distressed-border rounded px-3 py-1.5 flex items-center justify-between" style="overflow: visible;">
+        <!-- --top-k -->
+        <span class="phosphor-glow text-[11px] uppercase tracking-wider relative z-10 flex items-center justify-center gap-2" style="flex: 0 0 40%;">
+            <span class="material-symbols-outlined text-[var(--phosphor-green)] text-sm flag-icon">filter_list</span>
+            <span class="flag-label-full">--top-k <span class="opacity-50">(# results)</span></span>
+            <input id="flag-top-k" type="number" min="1" max="20" value="5" class="w-10 bg-black/80 border border-[var(--phosphor-green)]/30 rounded px-1 py-0.5 text-center font-mono text-[11px] phosphor-glow focus:ring-0 focus:border-[var(--phosphor-green)]/60">
+        </span>
+        <span class="flag-divider opacity-30 text-[var(--phosphor-green)]">|</span>
+        <!-- --no-answer -->
+        <span id="toggle-no-answer" class="relative z-10 flex items-center justify-center gap-1.5 cursor-pointer phosphor-glow text-[11px] uppercase tracking-wider">
+            <span class="material-symbols-outlined text-[var(--phosphor-green)] text-sm flag-icon">speed</span>
+            <span class="flag-label-full">--no-answer</span>
+            <div class="w-8 h-4 rounded-full relative flex-shrink-0" style="background: #1a1c1d; border: 1px solid #3d3f41;">
+                <div id="thumb-no-answer" class="w-3 h-3 rounded-full absolute top-0.5 transition-all duration-150" style="left: 2px; background: #555;"></div>
+            </div>
+        </span>
+        <span class="flag-divider opacity-30 text-[var(--phosphor-green)]">|</span>
+        <!-- --show-code -->
+        <span id="toggle-show-code" class="relative z-10 flex items-center justify-center gap-1.5 cursor-pointer phosphor-glow text-[11px] uppercase tracking-wider">
+            <span class="material-symbols-outlined text-[var(--phosphor-green)] text-sm flag-icon">code</span>
+            <span class="flag-label-full">--show-code</span>
+            <div class="w-8 h-4 rounded-full relative flex-shrink-0" style="background: #1a1c1d; border: 1px solid #3d3f41;">
+                <div id="thumb-show-code" class="w-3 h-3 rounded-full absolute top-0.5 transition-all duration-150" style="left: 2px; background: #555;"></div>
+            </div>
+        </span>
     </div>
 </aside>
 
@@ -424,7 +458,7 @@ body {
             <div class="distressed-border p-3 flex items-center gap-3" style="border-radius: 0 0 8px 8px;">
                 <div class="grime-overlay"></div>
                 <span class="phosphor-glow text-xl relative z-10">&gt;</span>
-                <textarea id="results-input" class="flex-1 bg-black/80 rounded border-none p-2 font-mono text-lg phosphor-glow focus:ring-0 placeholder:opacity-20 uppercase relative z-10 resize-none" placeholder="FOLLOW_UP_QUERY_" rows="1" style="min-width: 0; overflow-wrap: break-word;"></textarea>
+                <textarea id="results-input" class="flex-1 bg-black/80 rounded border-none p-2 font-mono text-lg phosphor-glow focus:ring-0 placeholder:opacity-20 relative z-10 resize-none" placeholder="FOLLOW_UP_QUERY_" rows="1" style="min-width: 0; overflow-wrap: break-word;"></textarea>
                 <div id="active-mode-badge" class="relative z-10 flex items-center gap-1.5 px-3 py-1 border border-[var(--phosphor-green)]/30 rounded phosphor-glow text-[12px] uppercase tracking-[0.2em] opacity-70 whitespace-nowrap">
                     <span id="badge-icon" class="material-symbols-outlined text-base">psychology</span>
                     <span id="badge-label">Explain</span>
@@ -454,6 +488,8 @@ body {
 (function() {
     const queryHistory = [];
     let isResultsView = false;
+    let flagNoAnswer = false;
+    let flagShowCode = false;
 
     // DOM elements
     const commandInput = document.getElementById('command-input');
@@ -470,6 +506,27 @@ body {
     const resultsTitle = document.getElementById('results-title');
     const resultsStream = document.getElementById('results-stream');
     const logoTitle = document.getElementById('logo-title');
+    const flagTopK = document.getElementById('flag-top-k');
+    const toggleNoAnswer = document.getElementById('toggle-no-answer');
+    const thumbNoAnswer = document.getElementById('thumb-no-answer');
+    const toggleShowCode = document.getElementById('toggle-show-code');
+    const thumbShowCode = document.getElementById('thumb-show-code');
+
+    // Toggle handlers for flag switches
+    toggleNoAnswer.addEventListener('click', function() {
+        flagNoAnswer = !flagNoAnswer;
+        var track = toggleNoAnswer.querySelector('div');
+        thumbNoAnswer.style.left = flagNoAnswer ? '17px' : '2px';
+        thumbNoAnswer.style.background = flagNoAnswer ? 'var(--phosphor-green)' : '#555';
+        track.style.borderColor = flagNoAnswer ? 'var(--phosphor-green)' : '#3d3f41';
+    });
+    toggleShowCode.addEventListener('click', function() {
+        flagShowCode = !flagShowCode;
+        var track = toggleShowCode.querySelector('div');
+        thumbShowCode.style.left = flagShowCode ? '17px' : '2px';
+        thumbShowCode.style.background = flagShowCode ? 'var(--phosphor-green)' : '#555';
+        track.style.borderColor = flagShowCode ? 'var(--phosphor-green)' : '#3d3f41';
+    });
 
     // Blinking cursor — hide when input has content
     const inputCursor = document.getElementById('input-cursor');
@@ -785,7 +842,7 @@ body {
             const res = await fetch('/query', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ question: query, top_k: 5, mode: activeMode })
+                body: JSON.stringify({ question: query, top_k: parseInt(flagTopK.value) || 5, mode: activeMode, no_answer: flagNoAnswer, show_code: flagShowCode })
             });
 
             const elapsed = (performance.now() - startTime) / 1000;
@@ -805,12 +862,46 @@ body {
                 resultsTitle.textContent = 'ROUTINE DATA: ' + data.chunks[0].unit_name.toUpperCase();
             }
 
-            // Render markdown answer
-            if (typeof marked !== 'undefined' && marked.parse) {
-                resultsContent.innerHTML = marked.parse(data.answer);
+            // Render results based on flags
+            var html = '';
+            if (flagNoAnswer) {
+                // No-answer mode: render chunk list
+                html = '<div class="mb-4 opacity-60 text-[18px] uppercase tracking-wider">Retrieval Results (' + data.chunks.length + ' chunks)</div>';
+                data.chunks.forEach(function(chunk, i) {
+                    html += '<div class="mb-4 border border-[var(--phosphor-green)]/20 rounded p-3">' +
+                        '<div class="flex justify-between items-start mb-1">' +
+                        '<span class="text-[var(--phosphor-green)] font-bold">' + escapeHtml(chunk.unit_name) + '</span>' +
+                        '<span class="opacity-50 text-[14px]">score: ' + chunk.score.toFixed(3) + '</span></div>' +
+                        '<div class="opacity-60 text-[16px]">' + escapeHtml(chunk.file_path) + ' : ' + chunk.start_line + '-' + chunk.end_line + '</div>' +
+                        '<div class="opacity-70 text-[18px] mt-1">' + escapeHtml(chunk.purpose) + '</div>';
+                    if (flagShowCode && chunk.snippet) {
+                        html += '<pre class="mt-2 bg-black/50 border border-[var(--phosphor-green)]/10 rounded p-2 text-[16px] overflow-x-auto whitespace-pre">' + escapeHtml(chunk.snippet) + '</pre>';
+                    }
+                    html += '</div>';
+                });
             } else {
-                resultsContent.innerHTML = '<pre class="whitespace-pre-wrap">' + escapeHtml(data.answer) + '</pre>';
+                // Normal mode: render markdown answer
+                if (typeof marked !== 'undefined' && marked.parse) {
+                    html = marked.parse(data.answer);
+                } else {
+                    html = '<pre class="whitespace-pre-wrap">' + escapeHtml(data.answer) + '</pre>';
+                }
+                // Append source snippets if show-code is on
+                if (flagShowCode && data.chunks) {
+                    html += '<div class="mt-6 border-t border-[var(--phosphor-green)]/20 pt-4">' +
+                        '<div class="mb-3 opacity-60 text-[18px] uppercase tracking-wider">Source Snippets</div>';
+                    data.chunks.forEach(function(chunk) {
+                        if (chunk.snippet) {
+                            html += '<div class="mb-3">' +
+                                '<div class="text-[var(--phosphor-green)] text-[16px] mb-1">' + escapeHtml(chunk.unit_name) + ' — ' + escapeHtml(chunk.file_path) + ':' + chunk.start_line + '-' + chunk.end_line + '</div>' +
+                                '<pre class="bg-black/50 border border-[var(--phosphor-green)]/10 rounded p-2 text-[16px] overflow-x-auto whitespace-pre">' + escapeHtml(chunk.snippet) + '</pre>' +
+                                '</div>';
+                        }
+                    });
+                    html += '</div>';
+                }
             }
+            resultsContent.innerHTML = html;
 
         } catch (err) {
             const elapsed = (performance.now() - startTime) / 1000;
