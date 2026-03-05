@@ -699,7 +699,13 @@ body {
         document.getElementById('badge-label').textContent = modeLabels[activeMode];
     }
 
-    var _shouldAutoScroll = false;
+    var _userNearBottom = false;
+    var _scrollContainer = null;
+
+    function _isNearBottom(el) {
+        // Consider "near bottom" if within 80px of the end
+        return el.scrollTop + el.clientHeight >= el.scrollHeight - 80;
+    }
 
     function renderConversation() {
         var html = '';
@@ -719,14 +725,20 @@ body {
             html += '</div>';
         });
         resultsContent.innerHTML = html;
-        // Only auto-scroll when explicitly requested (new question submitted),
-        // not during streaming so the user can read without the view jumping.
-        if (_shouldAutoScroll) {
-            var scrollParent = resultsContent.parentElement;
-            scrollParent.scrollTop = scrollParent.scrollHeight;
-            _shouldAutoScroll = false;
+        // Auto-scroll if the user is near the bottom (they've caught up to the stream)
+        if (!_scrollContainer) _scrollContainer = resultsContent.parentElement;
+        if (_userNearBottom || _isNearBottom(_scrollContainer)) {
+            _scrollContainer.scrollTop = _scrollContainer.scrollHeight;
         }
     }
+
+    // Track whether user has scrolled near bottom
+    setTimeout(function() {
+        _scrollContainer = resultsContent.parentElement;
+        _scrollContainer.addEventListener('scroll', function() {
+            _userNearBottom = _isNearBottom(_scrollContainer);
+        });
+    }, 0);
 
     function showIdleView() {
         isResultsView = false;
@@ -890,7 +902,7 @@ body {
         // Push pending pair and render loading state
         var pairIdx = conversationPairs.length;
         conversationPairs.push({ question: query, answer: null, error: false });
-        _shouldAutoScroll = true;
+        _userNearBottom = true;  // scroll to new question on submit
         renderConversation();
 
         // Set title to truncated first question
