@@ -243,3 +243,51 @@ Question: {question}
     max_tokens = 8192 if mode == "docs" else 4096
 
     return _chat_completion(messages, model=model, max_tokens=max_tokens)
+
+
+def generate_answer_stream(
+    question: str,
+    results: list[dict],
+    model: str = DEFAULT_MODEL,
+    mode: str = "explain",
+) -> Iterator[str]:
+    """Stream an answer, yielding content deltas.
+
+    Same as generate_answer but returns an iterator of token strings
+    suitable for measuring time-to-first-token.
+    """
+    context = build_context(results)
+
+    mode_instructions = {
+        "explain": "Provide a clear explanation of what this code does, how it works, and why.",
+        "deps": "Focus on the dependency relationships: what calls what, what external libraries are used, and the data flow between routines.",
+        "docs": "Generate concise modern documentation for the code, including function signature, parameter table, computation description, 1-2 usage examples, and related routines. Keep it focused — no performance tuning advice or implementation notes.",
+        "business_logic": "Extract and explain the core business/mathematical logic, the algorithm being implemented, and its practical applications.",
+    }
+
+    instruction = mode_instructions.get(mode, mode_instructions["explain"])
+
+    if context:
+        user_message = f"""Here are relevant code chunks from the LAPACK Fortran codebase:
+
+{context}
+
+Question: {question}
+
+{instruction}"""
+    else:
+        user_message = f"""No code chunks were found in the codebase for this query. Answer using your expertise in LAPACK and Fortran, and cite authoritative web sources.
+
+Question: {question}
+
+{instruction}"""
+
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": user_message},
+    ]
+
+    max_tokens = 8192 if mode == "docs" else 4096
+
+    with httpx.Client(timeout=60) as client:
+        yield from _chat_completion_stream(client, messages, model=model, max_tokens=max_tokens)

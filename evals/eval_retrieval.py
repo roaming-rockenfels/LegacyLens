@@ -23,7 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from legacylens.rag.embeddings import enable_embedding_cache, save_embedding_cache
-from legacylens.rag.generate import generate_answer
+from legacylens.rag.generate import generate_answer_stream
 from legacylens.rag.retrieve import retrieve_with_metrics
 from legacylens.rag.eval import (
     precision_at_k,
@@ -56,15 +56,13 @@ def format_category_report(per_query_with_category: list[dict]) -> str:
     for entry in per_query_with_category:
         by_cat[entry["category"]].append(entry)
 
-    has_e2e = "e2e_ms" in per_query_with_category[0]
-    e2e_header = " {'E2E':>10}" if has_e2e else ""
-
+    has_ttfs = "ttfs_ms" in per_query_with_category[0]
     lines: list[str] = []
     header = f"\n{'Category':<20} {'Queries':>8} {'Precision':>10} {'Recall':>10} {'MRR':>10} {'Hit Rate':>10} {'Retrieval':>10}"
-    if has_e2e:
-        header += f" {'E2E':>10}"
+    if has_ttfs:
+        header += f" {'TTFS':>10}"
     lines.append(header)
-    lines.append("-" * (90 if has_e2e else 80))
+    lines.append("-" * (90 if has_ttfs else 80))
 
     for cat_key in CATEGORY_ORDER:
         if cat_key not in by_cat:
@@ -76,18 +74,18 @@ def format_category_report(per_query_with_category: list[dict]) -> str:
             f"{label:<20} {len(entries):>8} {agg['precision']:>10.3f} {agg['recall']:>10.3f} "
             f"{agg['mrr']:>10.3f} {agg['hit_rate']:>10.3f} {agg['latency_ms']:>8.0f}ms"
         )
-        if has_e2e:
-            line += f" {agg['e2e_ms']:>8.0f}ms"
+        if has_ttfs:
+            line += f" {agg['ttfs_ms']:>8.0f}ms"
         lines.append(line)
 
     overall = aggregate_metrics(per_query_with_category)
-    lines.append("-" * (90 if has_e2e else 80))
+    lines.append("-" * (90 if has_ttfs else 80))
     line = (
         f"{'Overall':<20} {len(per_query_with_category):>8} {overall['precision']:>10.3f} {overall['recall']:>10.3f} "
         f"{overall['mrr']:>10.3f} {overall['hit_rate']:>10.3f} {overall['latency_ms']:>8.0f}ms"
     )
-    if has_e2e:
-        line += f" {overall['e2e_ms']:>8.0f}ms"
+    if has_ttfs:
+        line += f" {overall['ttfs_ms']:>8.0f}ms"
     lines.append(line)
     return "\n".join(lines)
 
@@ -98,15 +96,15 @@ def format_category_markdown(per_query_with_category: list[dict], top_k: int = 5
     for entry in per_query_with_category:
         by_cat[entry["category"]].append(entry)
 
-    has_e2e = "e2e_ms" in per_query_with_category[0]
+    has_ttfs = "ttfs_ms" in per_query_with_category[0]
 
     lines: list[str] = []
     lines.append(f"Retrieval quality evaluated against {len(per_query_with_category)} golden queries across {len(by_cat)} categories (top-k={top_k}):")
     lines.append("")
     header = f"| Category | Queries | Precision@{top_k} | Recall@{top_k} | MRR | Hit Rate | Retrieval (ms) |"
     sep = "|---|---|---|---|---|---|---|"
-    if has_e2e:
-        header += " E2E (ms) |"
+    if has_ttfs:
+        header += " TTFS (ms) |"
         sep += "---|"
     lines.append(header)
     lines.append(sep)
@@ -118,14 +116,14 @@ def format_category_markdown(per_query_with_category: list[dict], top_k: int = 5
         agg = aggregate_metrics(entries)
         label = CATEGORY_LABELS.get(cat_key, cat_key)
         row = f"| {label} | {len(entries)} | {agg['precision']:.2f} | {agg['recall']:.2f} | {agg['mrr']:.2f} | {agg['hit_rate']:.2f} | {agg['latency_ms']:.0f} |"
-        if has_e2e:
-            row += f" {agg['e2e_ms']:.0f} |"
+        if has_ttfs:
+            row += f" {agg['ttfs_ms']:.0f} |"
         lines.append(row)
 
     overall = aggregate_metrics(per_query_with_category)
     row = f"| **Overall** | **{len(per_query_with_category)}** | **{overall['precision']:.2f}** | **{overall['recall']:.2f}** | **{overall['mrr']:.2f}** | **{overall['hit_rate']:.2f}** | **{overall['latency_ms']:.0f}** |"
-    if has_e2e:
-        row += f" **{overall['e2e_ms']:.0f}** |"
+    if has_ttfs:
+        row += f" **{overall['ttfs_ms']:.0f}** |"
     lines.append(row)
     return "\n".join(lines)
 
@@ -162,7 +160,7 @@ def main() -> int:
     parser.add_argument(
         "--e2e",
         action="store_true",
-        help="Also measure end-to-end latency (retrieval + LLM generation)",
+        help="Also measure time-to-first-stream (retrieval + LLM TTFS)",
     )
     args = parser.parse_args()
 
@@ -183,11 +181,14 @@ def main() -> int:
         result = retrieve_with_metrics(query, top_k=top_k)
         latency_ms = (time.perf_counter() - t0) * 1000
 
-        e2e_ms = None
+        ttfs_ms = None
         if args.e2e:
-            t1 = time.perf_counter()
-            generate_answer(query, result.results)
-            e2e_ms = (time.perf_counter() - t0) * 1000  # from retrieval start
+            stream = generate_answer_stream(query, result.results)
+            first_token = next(stream, None)  # time to first token
+            ttfs_ms = (time.perf_counter() - t0) * 1000  # retrieval + TTFT
+            # Drain remaining stream to avoid connection issues
+            for _ in stream:
+                pass
 
         retrieved_names = [
             r.get("metadata", {}).get("unit_name", "") for r in result.results
@@ -202,8 +203,8 @@ def main() -> int:
             "hit_rate": hit_rate(expected, retrieved_names, k=top_k),
             "latency_ms": latency_ms,
         }
-        if e2e_ms is not None:
-            row["e2e_ms"] = e2e_ms
+        if ttfs_ms is not None:
+            row["ttfs_ms"] = ttfs_ms
         per_query.append(row)
 
     if not args.no_cache:
