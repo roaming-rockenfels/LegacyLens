@@ -25,8 +25,16 @@
 **/.DS_Store
 **/Thumbs.db
 
-# Data (cloned repos)
-**/data
+# Data (cloned repos) — keep SRC for show-code snippets
+**/data/lapack/.git
+**/data/lapack/BLAS
+**/data/lapack/CBLAS
+**/data/lapack/CMAKE
+**/data/lapack/DOCS
+**/data/lapack/INSTALL
+**/data/lapack/LAPACKE
+**/data/lapack/TESTING
+**/data/lapack/VARIANTS
 
 # Claude
 **/.claude
