@@ -257,7 +257,7 @@ body {
 <div class="scanlines"></div>
 
 <!-- LEFT SIDEBAR -->
-<aside class="w-1/3 h-full sidebar-texture border-r-8 border-[#3a3c3e] flex flex-col p-6 z-20 relative shadow-2xl">
+<aside class="w-1/3 h-full sidebar-texture border-r-8 border-[#3a3c3e] flex flex-col p-6 z-20 relative shadow-2xl overflow-hidden">
 
     <!-- Box 1: OPERATOR INPUT -->
     <div class="distressed-border p-4 mb-4 rounded-lg">
@@ -277,7 +277,7 @@ body {
     </div>
 
     <!-- Box 2: PROCESS MONITOR -->
-    <div class="crt-panel p-4 mb-4 flex-grow flex flex-col overflow-hidden">
+    <div class="crt-panel p-4 mb-4 flex-1 min-h-0 flex flex-col overflow-hidden">
         <div class="oil-smudge top-[-20px] left-[-20px]"></div>
         <div class="relative z-10 flex flex-col h-full overflow-hidden">
             <span class="block mb-3 opacity-70 text-[16px] phosphor-glow uppercase tracking-widest border-b border-[var(--phosphor-green)]/30 pb-1">Process Monitor</span>
@@ -310,7 +310,7 @@ body {
     </div>
 
     <!-- Box 3: Command Input -->
-    <div class="space-y-3">
+    <div class="flex-shrink-0 space-y-2">
         <div class="relative distressed-border rounded-md overflow-hidden p-1 input-cursor-wrap">
             <div class="grime-overlay opacity-30"></div>
             <span id="input-cursor" class="cursor-blink">_</span>
@@ -320,23 +320,47 @@ body {
     </div>
 
     <!-- Mode selector buttons (radio-style, one active at a time) -->
-    <div class="mt-4 grid grid-cols-4 gap-3 relative">
-        <div class="mode-btn active aspect-square distressed-border rounded flex flex-col items-center justify-center hover:brightness-125 cursor-pointer gap-1" data-mode="explain" title="Explain code purpose, logic, and behavior">
-            <span class="material-symbols-outlined text-[var(--phosphor-green)] text-2xl">psychology</span>
-            <span class="mode-label text-[14px] phosphor-glow uppercase tracking-wider relative z-10">Explain</span>
+    <div class="mt-2 grid grid-cols-4 gap-1.5 relative flex-shrink-0">
+        <div class="mode-btn active distressed-border rounded flex flex-col items-center justify-center hover:brightness-125 cursor-pointer gap-0.5 py-1.5" data-mode="explain" title="Explain code purpose, logic, and behavior">
+            <span class="material-symbols-outlined text-[var(--phosphor-green)] text-lg">psychology</span>
+            <span class="mode-label text-[11px] phosphor-glow uppercase tracking-wider relative z-10">Explain</span>
         </div>
-        <div class="mode-btn aspect-square distressed-border rounded flex flex-col items-center justify-center hover:brightness-125 cursor-pointer gap-1" data-mode="deps" title="Map dependencies and call chains">
-            <span class="material-symbols-outlined text-[var(--phosphor-green)] text-2xl">hub</span>
-            <span class="mode-label text-[14px] phosphor-glow uppercase tracking-wider opacity-50 relative z-10">Deps</span>
+        <div class="mode-btn distressed-border rounded flex flex-col items-center justify-center hover:brightness-125 cursor-pointer gap-0.5 py-1.5" data-mode="deps" title="Map dependencies and call chains">
+            <span class="material-symbols-outlined text-[var(--phosphor-green)] text-lg">hub</span>
+            <span class="mode-label text-[11px] phosphor-glow uppercase tracking-wider opacity-50 relative z-10">Deps</span>
         </div>
-        <div class="mode-btn aspect-square distressed-border rounded flex flex-col items-center justify-center hover:brightness-125 cursor-pointer gap-1" data-mode="docs" title="Generate modern documentation with params and examples">
-            <span class="material-symbols-outlined text-[var(--phosphor-green)] text-2xl">description</span>
-            <span class="mode-label text-[14px] phosphor-glow uppercase tracking-wider opacity-50 relative z-10">Docs</span>
+        <div class="mode-btn distressed-border rounded flex flex-col items-center justify-center hover:brightness-125 cursor-pointer gap-0.5 py-1.5" data-mode="docs" title="Generate modern documentation with params and examples">
+            <span class="material-symbols-outlined text-[var(--phosphor-green)] text-lg">description</span>
+            <span class="mode-label text-[11px] phosphor-glow uppercase tracking-wider opacity-50 relative z-10">Docs</span>
         </div>
-        <div class="mode-btn aspect-square distressed-border rounded flex flex-col items-center justify-center hover:brightness-125 cursor-pointer gap-1" data-mode="business_logic" title="Extract business rules and domain logic">
-            <span class="material-symbols-outlined text-[var(--phosphor-green)] text-2xl">rule</span>
-            <span class="mode-label text-[14px] phosphor-glow uppercase tracking-wider opacity-50 relative z-10">Logic</span>
+        <div class="mode-btn distressed-border rounded flex flex-col items-center justify-center hover:brightness-125 cursor-pointer gap-0.5 py-1.5" data-mode="business_logic" title="Extract business rules and domain logic">
+            <span class="material-symbols-outlined text-[var(--phosphor-green)] text-lg">rule</span>
+            <span class="mode-label text-[11px] phosphor-glow uppercase tracking-wider opacity-50 relative z-10">Logic</span>
         </div>
+    </div>
+
+    <!-- Query Flags -->
+    <div class="mt-2 space-y-1.5 flex-shrink-0">
+        <!-- --top-k -->
+        <div class="distressed-border rounded px-3 py-1.5 flex items-center justify-between" style="overflow: visible;">
+            <span class="phosphor-glow text-[13px] uppercase tracking-wider relative z-10">--top-k</span>
+            <input id="flag-top-k" type="number" min="1" max="20" value="5" class="relative z-10 w-14 bg-black/80 border border-[var(--phosphor-green)]/30 rounded px-2 py-0.5 text-center font-mono text-[13px] phosphor-glow focus:ring-0 focus:border-[var(--phosphor-green)]/60">
+        </div>
+        <!-- --no-answer -->
+        <div class="distressed-border rounded px-3 py-1.5 flex items-center justify-between" style="overflow: visible;">
+            <span class="phosphor-glow text-[13px] uppercase tracking-wider relative z-10">--no-answer</span>
+            <div id="toggle-no-answer" class="relative z-10 w-10 h-5 rounded-full cursor-pointer flex-shrink-0" style="background: #1a1c1d; border: 1px solid #3d3f41;">
+                <div id="thumb-no-answer" class="w-4 h-4 rounded-full absolute top-0.5 transition-all duration-150" style="left: 2px; background: #555;"></div>
+            </div>
+        </div>
+        <!-- --show-code -->
+        <div class="distressed-border rounded px-3 py-1.5 flex items-center justify-between" style="overflow: visible;">
+            <span class="phosphor-glow text-[13px] uppercase tracking-wider relative z-10">--show-code</span>
+            <div id="toggle-show-code" class="relative z-10 w-10 h-5 rounded-full cursor-pointer flex-shrink-0" style="background: #1a1c1d; border: 1px solid #3d3f41;">
+                <div id="thumb-show-code" class="w-4 h-4 rounded-full absolute top-0.5 transition-all duration-150" style="left: 2px; background: #555;"></div>
+            </div>
+        </div>
+        <p class="text-[10px] uppercase tracking-[0.25em] text-slate-600 font-bold px-2">Query Flags</p>
     </div>
 </aside>
 
@@ -424,7 +448,7 @@ body {
             <div class="distressed-border p-3 flex items-center gap-3" style="border-radius: 0 0 8px 8px;">
                 <div class="grime-overlay"></div>
                 <span class="phosphor-glow text-xl relative z-10">&gt;</span>
-                <textarea id="results-input" class="flex-1 bg-black/80 rounded border-none p-2 font-mono text-lg phosphor-glow focus:ring-0 placeholder:opacity-20 uppercase relative z-10 resize-none" placeholder="FOLLOW_UP_QUERY_" rows="1" style="min-width: 0; overflow-wrap: break-word;"></textarea>
+                <textarea id="results-input" class="flex-1 bg-black/80 rounded border-none p-2 font-mono text-lg phosphor-glow focus:ring-0 placeholder:opacity-20 relative z-10 resize-none" placeholder="FOLLOW_UP_QUERY_" rows="1" style="min-width: 0; overflow-wrap: break-word;"></textarea>
                 <div id="active-mode-badge" class="relative z-10 flex items-center gap-1.5 px-3 py-1 border border-[var(--phosphor-green)]/30 rounded phosphor-glow text-[12px] uppercase tracking-[0.2em] opacity-70 whitespace-nowrap">
                     <span id="badge-icon" class="material-symbols-outlined text-base">psychology</span>
                     <span id="badge-label">Explain</span>
@@ -454,6 +478,8 @@ body {
 (function() {
     const queryHistory = [];
     let isResultsView = false;
+    let flagNoAnswer = false;
+    let flagShowCode = false;
 
     // DOM elements
     const commandInput = document.getElementById('command-input');
@@ -470,6 +496,25 @@ body {
     const resultsTitle = document.getElementById('results-title');
     const resultsStream = document.getElementById('results-stream');
     const logoTitle = document.getElementById('logo-title');
+    const flagTopK = document.getElementById('flag-top-k');
+    const toggleNoAnswer = document.getElementById('toggle-no-answer');
+    const thumbNoAnswer = document.getElementById('thumb-no-answer');
+    const toggleShowCode = document.getElementById('toggle-show-code');
+    const thumbShowCode = document.getElementById('thumb-show-code');
+
+    // Toggle handlers for flag switches
+    toggleNoAnswer.addEventListener('click', function() {
+        flagNoAnswer = !flagNoAnswer;
+        thumbNoAnswer.style.left = flagNoAnswer ? '22px' : '2px';
+        thumbNoAnswer.style.background = flagNoAnswer ? 'var(--phosphor-green)' : '#555';
+        toggleNoAnswer.style.borderColor = flagNoAnswer ? 'var(--phosphor-green)' : '#3d3f41';
+    });
+    toggleShowCode.addEventListener('click', function() {
+        flagShowCode = !flagShowCode;
+        thumbShowCode.style.left = flagShowCode ? '22px' : '2px';
+        thumbShowCode.style.background = flagShowCode ? 'var(--phosphor-green)' : '#555';
+        toggleShowCode.style.borderColor = flagShowCode ? 'var(--phosphor-green)' : '#3d3f41';
+    });
 
     // Blinking cursor — hide when input has content
     const inputCursor = document.getElementById('input-cursor');
@@ -785,7 +830,7 @@ body {
             const res = await fetch('/query', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ question: query, top_k: 5, mode: activeMode })
+                body: JSON.stringify({ question: query, top_k: parseInt(flagTopK.value) || 5, mode: activeMode, no_answer: flagNoAnswer, show_code: flagShowCode })
             });
 
             const elapsed = (performance.now() - startTime) / 1000;
@@ -805,12 +850,46 @@ body {
                 resultsTitle.textContent = 'ROUTINE DATA: ' + data.chunks[0].unit_name.toUpperCase();
             }
 
-            // Render markdown answer
-            if (typeof marked !== 'undefined' && marked.parse) {
-                resultsContent.innerHTML = marked.parse(data.answer);
+            // Render results based on flags
+            var html = '';
+            if (flagNoAnswer) {
+                // No-answer mode: render chunk list
+                html = '<div class="mb-4 opacity-60 text-[18px] uppercase tracking-wider">Retrieval Results (' + data.chunks.length + ' chunks)</div>';
+                data.chunks.forEach(function(chunk, i) {
+                    html += '<div class="mb-4 border border-[var(--phosphor-green)]/20 rounded p-3">' +
+                        '<div class="flex justify-between items-start mb-1">' +
+                        '<span class="text-[var(--phosphor-green)] font-bold">' + escapeHtml(chunk.unit_name) + '</span>' +
+                        '<span class="opacity-50 text-[14px]">score: ' + chunk.score.toFixed(3) + '</span></div>' +
+                        '<div class="opacity-60 text-[16px]">' + escapeHtml(chunk.file_path) + ' : ' + chunk.start_line + '-' + chunk.end_line + '</div>' +
+                        '<div class="opacity-70 text-[18px] mt-1">' + escapeHtml(chunk.purpose) + '</div>';
+                    if (flagShowCode && chunk.snippet) {
+                        html += '<pre class="mt-2 bg-black/50 border border-[var(--phosphor-green)]/10 rounded p-2 text-[16px] overflow-x-auto whitespace-pre">' + escapeHtml(chunk.snippet) + '</pre>';
+                    }
+                    html += '</div>';
+                });
             } else {
-                resultsContent.innerHTML = '<pre class="whitespace-pre-wrap">' + escapeHtml(data.answer) + '</pre>';
+                // Normal mode: render markdown answer
+                if (typeof marked !== 'undefined' && marked.parse) {
+                    html = marked.parse(data.answer);
+                } else {
+                    html = '<pre class="whitespace-pre-wrap">' + escapeHtml(data.answer) + '</pre>';
+                }
+                // Append source snippets if show-code is on
+                if (flagShowCode && data.chunks) {
+                    html += '<div class="mt-6 border-t border-[var(--phosphor-green)]/20 pt-4">' +
+                        '<div class="mb-3 opacity-60 text-[18px] uppercase tracking-wider">Source Snippets</div>';
+                    data.chunks.forEach(function(chunk) {
+                        if (chunk.snippet) {
+                            html += '<div class="mb-3">' +
+                                '<div class="text-[var(--phosphor-green)] text-[16px] mb-1">' + escapeHtml(chunk.unit_name) + ' — ' + escapeHtml(chunk.file_path) + ':' + chunk.start_line + '-' + chunk.end_line + '</div>' +
+                                '<pre class="bg-black/50 border border-[var(--phosphor-green)]/10 rounded p-2 text-[16px] overflow-x-auto whitespace-pre">' + escapeHtml(chunk.snippet) + '</pre>' +
+                                '</div>';
+                        }
+                    });
+                    html += '</div>';
+                }
             }
+            resultsContent.innerHTML = html;
 
         } catch (err) {
             const elapsed = (performance.now() - startTime) / 1000;

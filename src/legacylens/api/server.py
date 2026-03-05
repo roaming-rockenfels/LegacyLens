@@ -21,6 +21,8 @@ class QueryRequest(BaseModel):
     question: str = Field(..., description="Natural language question about the codebase")
     top_k: int = Field(5, ge=1, le=20, description="Number of results to retrieve")
     mode: str = Field("explain", description="Response mode: explain, deps, docs, business_logic")
+    no_answer: bool = Field(False, description="Skip LLM answer, return chunks only")
+    show_code: bool = Field(False, description="Include source code snippets")
 
 
 class ChunkResult(BaseModel):
@@ -75,7 +77,7 @@ def query_codebase(req: QueryRequest):
     if not results:
         raise HTTPException(status_code=404, detail="No relevant chunks found")
 
-    answer = generate_answer(req.question, results, mode=req.mode)
+    answer = "" if req.no_answer else generate_answer(req.question, results, mode=req.mode)
 
     from legacylens.rag.source_reader import read_source_snippet
 
