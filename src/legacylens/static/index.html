@@ -490,6 +490,8 @@ body {
     let isResultsView = false;
     let flagNoAnswer = false;
     let flagShowCode = false;
+    let currentSessionId = null;
+    let conversationPairs = [];
 
     // DOM elements
     const commandInput = document.getElementById('command-input');
@@ -665,6 +667,7 @@ body {
         btn.addEventListener('click', function() {
             const mode = this.getAttribute('data-mode');
             if (mode === activeMode) return;
+            if (currentSessionId) return; // locked during active conversation
 
             // Deactivate all, activate clicked
             document.querySelectorAll('.mode-btn').forEach(function(b) {
@@ -689,8 +692,43 @@ body {
         document.getElementById('badge-label').textContent = modeLabels[activeMode];
     }
 
+    var _shouldAutoScroll = false;
+
+    function renderConversation() {
+        var html = '';
+        conversationPairs.forEach(function(pair) {
+            html += '<div class="mb-6">';
+            html += '<div class="opacity-60 text-base uppercase tracking-widest mb-1">Operator</div>';
+            html += '<div class="mb-3 border-l-2 border-[var(--neon-pink)]/40 pl-3 opacity-80">&gt; ' + escapeHtml(pair.question) + '</div>';
+            html += '<div class="opacity-60 text-base uppercase tracking-widest mb-1">LegacyLens</div>';
+            if (pair.answer === null) {
+                html += '<p class="opacity-50 animate-pulse">Processing query...</p>';
+            } else if (pair.error) {
+                html += '<p class="text-red-500">ERROR: ' + escapeHtml(pair.answer) + '</p>';
+            } else {
+                var rendered = (typeof marked !== 'undefined' && marked.parse) ? marked.parse(pair.answer) : '<pre class="whitespace-pre-wrap">' + escapeHtml(pair.answer) + '</pre>';
+                html += '<div>' + rendered + '</div>';
+            }
+            html += '</div>';
+        });
+        resultsContent.innerHTML = html;
+        // Only auto-scroll when explicitly requested (new question submitted),
+        // not during streaming so the user can read without the view jumping.
+        if (_shouldAutoScroll) {
+            var scrollParent = resultsContent.parentElement;
+            scrollParent.scrollTop = scrollParent.scrollHeight;
+            _shouldAutoScroll = false;
+        }
+    }
+
     function showIdleView() {
         isResultsView = false;
+        // Fire-and-forget session cleanup
+        if (currentSessionId) {
+            fetch('/chat/' + currentSessionId, { method: 'DELETE' }).catch(function() {});
+        }
+        currentSessionId = null;
+        conversationPairs = [];
         resultsView.classList.add('hidden');
         idleView.classList.remove('hidden');
         idleView.classList.add('view-fade-enter');
@@ -746,6 +784,12 @@ body {
             li.innerHTML = '<span class="material-symbols-outlined text-base flex-shrink-0">' + modeIcons[entry.mode] + '</span> ' + entry.query;
             li.title = entry.query + ' [' + entry.mode.toUpperCase() + ']';
             li.addEventListener('click', function() {
+                // Close current session so a fresh conversation starts
+                if (currentSessionId) {
+                    fetch('/chat/' + currentSessionId, { method: 'DELETE' }).catch(function() {});
+                    currentSessionId = null;
+                    conversationPairs = [];
+                }
                 // Restore the original mode
                 if (entry.mode !== activeMode) {
                     document.querySelectorAll('.mode-btn').forEach(function(b) {
@@ -816,11 +860,14 @@ body {
     }
 
     async function submitQuery(query) {
-        // Add to history (avoid duplicates at top)
-        const existingIdx = queryHistory.findIndex(function(e) { return e.query === query; });
-        if (existingIdx !== -1) queryHistory.splice(existingIdx, 1);
-        queryHistory.push({ query: query, mode: activeMode });
-        updateQueryHistory();
+        // Only add to sidebar history on first message of a new conversation
+        var isFirstMessage = (currentSessionId === null && conversationPairs.length === 0);
+        if (isFirstMessage) {
+            const existingIdx = queryHistory.findIndex(function(e) { return e.query === query; });
+            if (existingIdx !== -1) queryHistory.splice(existingIdx, 1);
+            queryHistory.push({ query: query, mode: activeMode });
+            updateQueryHistory();
+        }
 
         // Update operator input
         updateOperatorInput(query);
@@ -828,85 +875,106 @@ body {
         // Switch to results view
         if (!isResultsView) showResultsView();
 
-        // Show loading in results
-        resultsContent.innerHTML = '<p class="opacity-50 animate-pulse">Processing query...</p>';
-        resultsTitle.textContent = 'ROUTINE DATA: ---';
+        // Push pending pair and render loading state
+        var pairIdx = conversationPairs.length;
+        conversationPairs.push({ question: query, answer: null, error: false });
+        _shouldAutoScroll = true;
+        renderConversation();
+
+        // Set title to truncated first question
+        if (pairIdx === 0) {
+            var truncated = query.length > 40 ? query.substring(0, 40) + '...' : query;
+            resultsTitle.textContent = 'SESSION: ' + truncated.toUpperCase();
+        }
         resultsStream.textContent = 'ENCRYPTED STREAM 0x' + Math.random().toString(16).substring(2, 6).toUpperCase();
 
         // Animate pipeline
         const stages = await animatePipeline();
         const startTime = performance.now();
 
-        // Call API
+        // Call streaming chat API
         try {
-            const res = await fetch('/query', {
+            const res = await fetch('/chat/stream', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ question: query, top_k: parseInt(flagTopK.value) || 5, mode: activeMode, no_answer: flagNoAnswer, show_code: flagShowCode })
+                body: JSON.stringify({ message: query, session_id: currentSessionId, top_k: parseInt(flagTopK.value) || 5, mode: activeMode })
             });
 
-            const elapsed = (performance.now() - startTime) / 1000;
-
             if (!res.ok) {
+                const elapsed = (performance.now() - startTime) / 1000;
                 const err = await res.json().catch(() => ({ detail: 'Request failed' }));
                 completePipeline(stages, elapsed);
-                resultsContent.innerHTML = '<p class="text-red-500">ERROR: ' + escapeHtml(err.detail || 'Unknown error') + '</p>';
+                conversationPairs[pairIdx].answer = err.detail || 'Unknown error';
+                conversationPairs[pairIdx].error = true;
+                renderConversation();
                 return;
             }
 
-            const data = await res.json();
-            completePipeline(stages, elapsed);
+            var pipelineCompleted = false;
+            var renderQueued = false;
+            var fullAnswer = '';
+            var reader = res.body.getReader();
+            var decoder = new TextDecoder();
+            var buffer = '';
 
-            // Update title with first chunk's unit name
-            if (data.chunks && data.chunks.length > 0) {
-                resultsTitle.textContent = 'ROUTINE DATA: ' + data.chunks[0].unit_name.toUpperCase();
-            }
-
-            // Render results based on flags
-            var html = '';
-            if (flagNoAnswer) {
-                // No-answer mode: render chunk list
-                html = '<div class="mb-4 opacity-60 text-[18px] uppercase tracking-wider">Retrieval Results (' + data.chunks.length + ' chunks)</div>';
-                data.chunks.forEach(function(chunk, i) {
-                    html += '<div class="mb-4 border border-[var(--phosphor-green)]/20 rounded p-3">' +
-                        '<div class="flex justify-between items-start mb-1">' +
-                        '<span class="text-[var(--phosphor-green)] font-bold">' + escapeHtml(chunk.unit_name) + '</span>' +
-                        '<span class="opacity-50 text-[14px]">score: ' + chunk.score.toFixed(3) + '</span></div>' +
-                        '<div class="opacity-60 text-[16px]">' + escapeHtml(chunk.file_path) + ' : ' + chunk.start_line + '-' + chunk.end_line + '</div>' +
-                        '<div class="opacity-70 text-[18px] mt-1">' + escapeHtml(chunk.purpose) + '</div>';
-                    if (flagShowCode && chunk.snippet) {
-                        html += '<pre class="mt-2 bg-black/50 border border-[var(--phosphor-green)]/10 rounded p-2 text-[16px] overflow-x-auto whitespace-pre">' + escapeHtml(chunk.snippet) + '</pre>';
-                    }
-                    html += '</div>';
-                });
-            } else {
-                // Normal mode: render markdown answer
-                if (typeof marked !== 'undefined' && marked.parse) {
-                    html = marked.parse(data.answer);
-                } else {
-                    html = '<pre class="whitespace-pre-wrap">' + escapeHtml(data.answer) + '</pre>';
-                }
-                // Append source snippets if show-code is on
-                if (flagShowCode && data.chunks) {
-                    html += '<div class="mt-6 border-t border-[var(--phosphor-green)]/20 pt-4">' +
-                        '<div class="mb-3 opacity-60 text-[18px] uppercase tracking-wider">Source Snippets</div>';
-                    data.chunks.forEach(function(chunk) {
-                        if (chunk.snippet) {
-                            html += '<div class="mb-3">' +
-                                '<div class="text-[var(--phosphor-green)] text-[16px] mb-1">' + escapeHtml(chunk.unit_name) + ' — ' + escapeHtml(chunk.file_path) + ':' + chunk.start_line + '-' + chunk.end_line + '</div>' +
-                                '<pre class="bg-black/50 border border-[var(--phosphor-green)]/10 rounded p-2 text-[16px] overflow-x-auto whitespace-pre">' + escapeHtml(chunk.snippet) + '</pre>' +
-                                '</div>';
-                        }
+            function scheduleRender() {
+                if (!renderQueued) {
+                    renderQueued = true;
+                    requestAnimationFrame(function() {
+                        renderQueued = false;
+                        renderConversation();
                     });
-                    html += '</div>';
                 }
             }
-            resultsContent.innerHTML = html;
+
+            while (true) {
+                var chunk = await reader.read();
+                if (chunk.done) break;
+                buffer += decoder.decode(chunk.value, { stream: true });
+
+                var lines = buffer.split('\n\n');
+                buffer = lines.pop() || '';
+
+                for (var li = 0; li < lines.length; li++) {
+                    var line = lines[li].trim();
+                    if (!line.startsWith('data: ')) continue;
+                    try {
+                        var evt = JSON.parse(line.substring(6));
+                        if (evt.type === 'session') {
+                            currentSessionId = evt.session_id;
+                            if (!pipelineCompleted) {
+                                var elapsed = (performance.now() - startTime) / 1000;
+                                completePipeline(stages, elapsed);
+                                pipelineCompleted = true;
+                            }
+                        } else if (evt.type === 'retrieval') {
+                            var stageVec = document.getElementById('stage-vector');
+                            if (evt.chunk_count > 0) {
+                                var labelSpan = stageVec.querySelector('span:first-child');
+                                labelSpan.innerHTML = 'VECTOR SEARCH: <span class="text-[var(--phosphor-green)]" title="' + evt.chunk_count + ' chunks retrieved">&#x2713; ' + evt.chunk_count + '</span>';
+                            }
+                        } else if (evt.type === 'delta') {
+                            fullAnswer += evt.content;
+                            conversationPairs[pairIdx].answer = fullAnswer;
+                            scheduleRender();
+                        } else if (evt.type === 'done') {
+                            if (!pipelineCompleted) {
+                                var elapsed2 = (performance.now() - startTime) / 1000;
+                                completePipeline(stages, elapsed2);
+                            }
+                        }
+                    } catch (parseErr) { /* ignore malformed SSE lines */ }
+                }
+            }
+            // Final render to ensure complete answer is displayed
+            renderConversation();
 
         } catch (err) {
-            const elapsed = (performance.now() - startTime) / 1000;
+            var elapsed = (performance.now() - startTime) / 1000;
             completePipeline(stages, elapsed);
-            resultsContent.innerHTML = '<p class="text-red-500">CONNECTION ERROR: ' + escapeHtml(err.message) + '</p>';
+            conversationPairs[pairIdx].answer = err.message;
+            conversationPairs[pairIdx].error = true;
+            renderConversation();
         }
     }
 
