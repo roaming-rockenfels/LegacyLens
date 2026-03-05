@@ -486,7 +486,8 @@ body {
 
 <script>
 (function() {
-    const queryHistory = [];
+    const chatSessions = [];  // {label, mode, sessionId, pairs}
+    let activeChatIdx = -1;   // index into chatSessions, -1 = none
     let isResultsView = false;
     let flagNoAnswer = false;
     let flagShowCode = false;
@@ -723,12 +724,11 @@ body {
 
     function showIdleView() {
         isResultsView = false;
-        // Fire-and-forget session cleanup
-        if (currentSessionId) {
-            fetch('/chat/' + currentSessionId, { method: 'DELETE' }).catch(function() {});
-        }
+        // Save current chat before clearing
+        saveActiveChat();
         currentSessionId = null;
         conversationPairs = [];
+        activeChatIdx = -1;
         resultsView.classList.add('hidden');
         idleView.classList.remove('hidden');
         idleView.classList.add('view-fade-enter');
@@ -775,22 +775,32 @@ body {
         operatorInput.textContent = '"' + query + '"';
     }
 
-    function updateQueryHistory() {
-        if (queryHistory.length === 0) return;
+    function saveActiveChat() {
+        if (activeChatIdx >= 0 && activeChatIdx < chatSessions.length) {
+            chatSessions[activeChatIdx].pairs = conversationPairs.slice();
+            chatSessions[activeChatIdx].sessionId = currentSessionId;
+        }
+    }
+
+    function updateChatHistory() {
+        if (chatSessions.length === 0) return;
         queryHistoryList.innerHTML = '';
-        queryHistory.slice().reverse().forEach(function(entry, i) {
+        chatSessions.slice().reverse().forEach(function(entry, revIdx) {
+            var realIdx = chatSessions.length - 1 - revIdx;
             const li = document.createElement('li');
-            li.className = 'cursor-pointer hover:brightness-125 transition-all truncate flex items-center gap-1.5';
-            li.innerHTML = '<span class="material-symbols-outlined text-base flex-shrink-0">' + modeIcons[entry.mode] + '</span> ' + entry.query;
-            li.title = entry.query + ' [' + entry.mode.toUpperCase() + ']';
+            var activeClass = realIdx === activeChatIdx ? ' brightness-125' : '';
+            li.className = 'cursor-pointer hover:brightness-125 transition-all truncate flex items-center gap-1.5' + activeClass;
+            li.innerHTML = '<span class="material-symbols-outlined text-base flex-shrink-0">' + modeIcons[entry.mode] + '</span> ' + escapeHtml(entry.label);
+            li.title = entry.label + ' [' + entry.mode.toUpperCase() + ']';
             li.addEventListener('click', function() {
-                // Close current session so a fresh conversation starts
-                if (currentSessionId) {
-                    fetch('/chat/' + currentSessionId, { method: 'DELETE' }).catch(function() {});
-                    currentSessionId = null;
-                    conversationPairs = [];
-                }
-                // Restore the original mode
+                if (realIdx === activeChatIdx) return;
+                // Save current conversation
+                saveActiveChat();
+                // Restore clicked session
+                activeChatIdx = realIdx;
+                currentSessionId = entry.sessionId;
+                conversationPairs = entry.pairs.slice();
+                // Restore mode
                 if (entry.mode !== activeMode) {
                     document.querySelectorAll('.mode-btn').forEach(function(b) {
                         b.classList.remove('active');
@@ -802,7 +812,12 @@ body {
                     activeMode = entry.mode;
                     renderModeAlert();
                 }
-                submitQuery(entry.query);
+                // Show conversation
+                if (!isResultsView) showResultsView();
+                var truncated = entry.label.length > 40 ? entry.label.substring(0, 40) + '...' : entry.label;
+                resultsTitle.textContent = 'SESSION: ' + truncated.toUpperCase();
+                renderConversation();
+                updateChatHistory();
             });
             queryHistoryList.appendChild(li);
         });
@@ -851,13 +866,13 @@ body {
     }
 
     async function submitQuery(query) {
-        // Only add to sidebar history on first message of a new conversation
+        // On first message of a new conversation, save previous and create entry
         var isFirstMessage = (currentSessionId === null && conversationPairs.length === 0);
         if (isFirstMessage) {
-            const existingIdx = queryHistory.findIndex(function(e) { return e.query === query; });
-            if (existingIdx !== -1) queryHistory.splice(existingIdx, 1);
-            queryHistory.push({ query: query, mode: activeMode });
-            updateQueryHistory();
+            saveActiveChat();
+            chatSessions.push({ label: query, mode: activeMode, sessionId: null, pairs: [] });
+            activeChatIdx = chatSessions.length - 1;
+            updateChatHistory();
         }
 
         // Update operator input
@@ -933,6 +948,7 @@ body {
                         var evt = JSON.parse(line.substring(6));
                         if (evt.type === 'session') {
                             currentSessionId = evt.session_id;
+                            if (activeChatIdx >= 0) chatSessions[activeChatIdx].sessionId = currentSessionId;
                         } else if (evt.type === 'retrieval') {
                             var stageVec = document.getElementById('stage-vector');
                             var vecStatus = stageVec.querySelector('span:last-child');
@@ -969,6 +985,7 @@ body {
             }
             // Final render to ensure complete answer is displayed
             renderConversation();
+            saveActiveChat();
 
         } catch (err) {
             var elapsed = (performance.now() - startTime) / 1000;
