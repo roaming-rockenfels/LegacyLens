@@ -100,6 +100,47 @@ def test_query_endpoint_missing_source(mock_retrieve, mock_generate, mock_snippe
     assert chunk["snippet"] == ""
 
 
+@patch("legacylens.rag.source_reader.read_source_snippet", return_value="")
+@patch("legacylens.rag.generate.generate_answer", return_value="DGESV deps.")
+@patch("legacylens.rag.retrieve.retrieve", return_value=[
+    {
+        "id": "fortran:dgesv",
+        "score": 0.85,
+        "metadata": _DGESV_METADATA,
+    }
+])
+def test_query_with_pin_unit(mock_retrieve, mock_generate, mock_snippet):
+    """POST /query with pin_unit passes it through to retrieve()."""
+    resp = client.post("/query", json={
+        "question": "What are the dependencies of DGESV?",
+        "top_k": 5,
+        "mode": "deps",
+        "pin_unit": "DGESV",
+    })
+    assert resp.status_code == 200
+    mock_retrieve.assert_called_once_with("What are the dependencies of DGESV?", top_k=5, pin_unit="DGESV")
+
+
+@patch("legacylens.rag.source_reader.read_source_snippet", return_value="")
+@patch("legacylens.rag.generate.generate_answer", return_value="DGESV solves Ax=B.")
+@patch("legacylens.rag.retrieve.retrieve", return_value=[
+    {
+        "id": "fortran:dgesv",
+        "score": 0.85,
+        "metadata": _DGESV_METADATA,
+    }
+])
+def test_query_without_pin_unit(mock_retrieve, mock_generate, mock_snippet):
+    """POST /query without pin_unit defaults to None (backward compat)."""
+    resp = client.post("/query", json={
+        "question": "How does DGESV work?",
+        "top_k": 3,
+        "mode": "explain",
+    })
+    assert resp.status_code == 200
+    mock_retrieve.assert_called_once_with("How does DGESV work?", top_k=3, pin_unit=None)
+
+
 @patch("legacylens.rag.generate.generate_answer", return_value="General LAPACK answer with citations.")
 @patch("legacylens.rag.retrieve.retrieve", return_value=[])
 def test_query_empty_results_returns_answer(mock_retrieve, mock_generate):
@@ -118,6 +159,16 @@ def test_search_endpoint(mock_retrieve):
     resp = client.get("/search", params={"question": "test", "top_k": 2})
     assert resp.status_code == 200
     assert len(resp.json()["results"]) == 1
+
+
+@patch("legacylens.rag.retrieve.retrieve", return_value=[
+    {"id": "test", "score": 0.5, "metadata": {"unit_name": "DGESV", "unit_type": "sub", "file_path": "t.f", "language": "fortran", "purpose": ""}}
+])
+def test_search_with_pin_unit(mock_retrieve):
+    """GET /search with pin_unit passes it through to retrieve()."""
+    resp = client.get("/search", params={"question": "deps of DGESV", "top_k": 3, "pin_unit": "DGESV"})
+    assert resp.status_code == 200
+    mock_retrieve.assert_called_once_with("deps of DGESV", top_k=3, pin_unit="DGESV")
 
 
 @patch("legacylens.rag.storage.get_index_stats", return_value={"total_vector_count": 100, "dimension": 1024})
