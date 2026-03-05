@@ -929,7 +929,7 @@ body {
             const res = await fetch('/chat/stream', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: query, session_id: currentSessionId, top_k: parseInt(flagTopK.value) || 5, mode: activeMode })
+                body: JSON.stringify({ message: query, session_id: currentSessionId, top_k: parseInt(flagTopK.value) || 5, mode: activeMode, no_answer: flagNoAnswer, show_code: flagShowCode })
             });
 
             if (!res.ok) {
@@ -983,6 +983,20 @@ body {
                                 vecStatus.innerHTML = '<span class="text-[var(--phosphor-green)]">&#x2713; ' + evt.chunk_count + ' chunks</span>';
                             } else {
                                 vecStatus.innerHTML = '<span class="opacity-50">0 chunks</span>';
+                            }
+                            // Render chunk details if present (no_answer or show_code)
+                            if (evt.chunks && evt.chunks.length > 0) {
+                                var chunksMd = '### Retrieved Chunks (' + evt.chunks.length + ')\n\n';
+                                evt.chunks.forEach(function(c, ci) {
+                                    chunksMd += '**' + (ci + 1) + '. ' + c.unit_type.toUpperCase() + ' ' + c.unit_name + '** — score: ' + c.score.toFixed(3) + '\n';
+                                    chunksMd += '`' + c.file_path + ':' + c.start_line + '-' + c.end_line + '`\n';
+                                    if (c.purpose) chunksMd += c.purpose + '\n';
+                                    if (c.snippet) chunksMd += '\n```fortran\n' + c.snippet + '\n```\n';
+                                    chunksMd += '\n';
+                                });
+                                fullAnswer += chunksMd;
+                                conversationPairs[pairIdx].answer = fullAnswer;
+                                scheduleRender();
                             }
                             // Advance pipeline: activate LLM stage
                             var stageLlm2 = document.getElementById('stage-llm');

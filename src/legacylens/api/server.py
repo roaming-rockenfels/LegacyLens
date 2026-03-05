@@ -74,6 +74,8 @@ class ChatRequest(BaseModel):
     session_id: Optional[str] = Field(None, description="Existing session ID to continue")
     top_k: int = Field(5, ge=1, le=20, description="Number of results to retrieve")
     mode: str = Field("explain", description="Response mode: explain, deps, docs, business_logic")
+    no_answer: bool = Field(False, description="Skip LLM answer, return chunks only")
+    show_code: bool = Field(False, description="Include source code snippets in chunk results")
 
 
 class ChatResponse(BaseModel):
@@ -193,7 +195,13 @@ def chat(req: ChatRequest):
         entry["last_used"] = time.monotonic()
         session = entry["session"]
 
-    answer = session.ask(req.message, top_k=req.top_k)
+    if req.no_answer:
+        from legacylens.rag.retrieve import retrieve as _retrieve
+        results = _retrieve(req.message, top_k=req.top_k)
+        session._last_chunks = results
+        answer = ""
+    else:
+        answer = session.ask(req.message, top_k=req.top_k)
 
     return ChatResponse(
         session_id=session_id,
@@ -229,12 +237,71 @@ def chat_stream(req: ChatRequest):
 
     def event_generator():
         yield f"data: {json.dumps({'type': 'session', 'session_id': session_id, 'is_new_session': is_new})}\n\n"
+
+        if req.no_answer:
+            # Skip LLM — just retrieve chunks and return them
+            from legacylens.rag.retrieve import retrieve as _retrieve
+            from legacylens.rag.source_reader import read_source_snippet
+
+            results = _retrieve(req.message, top_k=req.top_k)
+            session._last_chunks = results
+
+            chunks_payload = []
+            for match in results:
+                meta = match.get("metadata", {})
+                fp = meta.get("file_path", "")
+                sl = meta.get("start_line", 0)
+                el = meta.get("end_line", 0)
+                snippet = ""
+                if req.show_code and isinstance(sl, int) and isinstance(el, int) and sl and el:
+                    snippet = read_source_snippet(fp, sl, el)
+                chunks_payload.append({
+                    "unit_name": meta.get("unit_name", ""),
+                    "unit_type": meta.get("unit_type", ""),
+                    "file_path": fp,
+                    "purpose": meta.get("purpose", ""),
+                    "score": match.get("score", 0),
+                    "start_line": sl if isinstance(sl, int) else 0,
+                    "end_line": el if isinstance(el, int) else 0,
+                    "snippet": snippet,
+                })
+
+            yield f"data: {json.dumps({'type': 'retrieval', 'chunk_count': len(results), 'chunks': chunks_payload})}\n\n"
+            yield f"data: {json.dumps({'type': 'done'})}\n\n"
+            return
+
         retrieval_sent = False
         for delta in session.ask_stream(req.message, top_k=req.top_k):
             if not retrieval_sent:
                 # Retrieval has completed by the time the first delta arrives.
-                chunk_count = len(session._last_chunks)
-                yield f"data: {json.dumps({'type': 'retrieval', 'chunk_count': chunk_count})}\n\n"
+                last_chunks = session._last_chunks
+                chunk_count = len(last_chunks)
+                retrieval_data = {'type': 'retrieval', 'chunk_count': chunk_count}
+
+                if req.show_code:
+                    from legacylens.rag.source_reader import read_source_snippet
+                    chunks_payload = []
+                    for match in last_chunks:
+                        meta = match.get("metadata", {})
+                        fp = meta.get("file_path", "")
+                        sl = meta.get("start_line", 0)
+                        el = meta.get("end_line", 0)
+                        snippet = ""
+                        if isinstance(sl, int) and isinstance(el, int) and sl and el:
+                            snippet = read_source_snippet(fp, sl, el)
+                        chunks_payload.append({
+                            "unit_name": meta.get("unit_name", ""),
+                            "unit_type": meta.get("unit_type", ""),
+                            "file_path": fp,
+                            "purpose": meta.get("purpose", ""),
+                            "score": match.get("score", 0),
+                            "start_line": sl if isinstance(sl, int) else 0,
+                            "end_line": el if isinstance(el, int) else 0,
+                            "snippet": snippet,
+                        })
+                    retrieval_data['chunks'] = chunks_payload
+
+                yield f"data: {json.dumps(retrieval_data)}\n\n"
                 retrieval_sent = True
             yield f"data: {json.dumps({'type': 'delta', 'content': delta})}\n\n"
         yield f"data: {json.dumps({'type': 'done'})}\n\n"
