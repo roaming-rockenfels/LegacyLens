@@ -44,6 +44,7 @@ class QueryRequest(BaseModel):
     mode: str = Field("explain", description="Response mode: explain, deps, docs, business_logic")
     no_answer: bool = Field(False, description="Skip LLM answer, return chunks only")
     show_code: bool = Field(False, description="Include source code snippets")
+    pin_unit: str | None = Field(None, description="Pin a specific routine/subroutine name to guarantee it appears in results")
 
 
 class ChunkResult(BaseModel):
@@ -107,7 +108,7 @@ def query_codebase(req: QueryRequest):
     from legacylens.rag.retrieve import retrieve
     from legacylens.rag.generate import generate_answer
 
-    results = retrieve(req.question, top_k=req.top_k)
+    results = retrieve(req.question, top_k=req.top_k, pin_unit=req.pin_unit)
     answer = "" if req.no_answer else generate_answer(req.question, results, mode=req.mode)
 
     from legacylens.rag.source_reader import read_source_snippet
@@ -147,11 +148,11 @@ def query_codebase(req: QueryRequest):
 
 
 @app.get("/search")
-def search(question: str, top_k: int = 5):
+def search(question: str, top_k: int = 5, pin_unit: str | None = None):
     """Search without LLM answer — just retrieval results."""
     from legacylens.rag.retrieve import retrieve
 
-    results = retrieve(question, top_k=top_k)
+    results = retrieve(question, top_k=top_k, pin_unit=pin_unit)
     return {"question": question, "results": results}
 
 
