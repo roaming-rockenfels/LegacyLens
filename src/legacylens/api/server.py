@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import json
+import threading
+import time
+import uuid
 from pathlib import Path
+from typing import Optional
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 STATIC_DIR = Path(__file__).parent.parent / "static"
@@ -17,6 +22,22 @@ app = FastAPI(
 )
 
 
+# ── Chat session store ──────────────────────────────────────────────
+_sessions: dict[str, dict] = {}
+_lock = threading.Lock()
+_SESSION_TTL = 1800  # 30 minutes
+
+
+def _cleanup_sessions() -> None:
+    """Remove sessions idle longer than TTL. Called under _lock."""
+    now = time.monotonic()
+    expired = [sid for sid, s in _sessions.items() if now - s["last_used"] > _SESSION_TTL]
+    for sid in expired:
+        s = _sessions.pop(sid)
+        s["session"].close()
+
+
+# ── Request / Response models ───────────────────────────────────────
 class QueryRequest(BaseModel):
     question: str = Field(..., description="Natural language question about the codebase")
     top_k: int = Field(5, ge=1, le=20, description="Number of results to retrieve")
@@ -47,6 +68,20 @@ class QueryResponse(BaseModel):
     mode: str
 
 
+class ChatRequest(BaseModel):
+    message: str = Field(..., description="User message")
+    session_id: Optional[str] = Field(None, description="Existing session ID to continue")
+    top_k: int = Field(5, ge=1, le=20, description="Number of results to retrieve")
+    mode: str = Field("explain", description="Response mode: explain, deps, docs, business_logic")
+
+
+class ChatResponse(BaseModel):
+    session_id: str
+    question: str
+    answer: str
+    is_new_session: bool
+
+
 class StatsResponse(BaseModel):
     total_vector_count: int
     dimension: int
@@ -73,10 +108,6 @@ def query_codebase(req: QueryRequest):
     from legacylens.rag.generate import generate_answer
 
     results = retrieve(req.question, top_k=req.top_k)
-
-    if not results:
-        raise HTTPException(status_code=404, detail="No relevant chunks found")
-
     answer = "" if req.no_answer else generate_answer(req.question, results, mode=req.mode)
 
     from legacylens.rag.source_reader import read_source_snippet
@@ -133,3 +164,92 @@ def index_stats():
         total_vector_count=info.get("total_vector_count", 0),
         dimension=info.get("dimension", 0),
     )
+
+
+# ── Chat endpoints ──────────────────────────────────────────────────
+
+@app.post("/chat", response_model=ChatResponse)
+def chat(req: ChatRequest):
+    from legacylens.rag.session import ChatSession
+
+    with _lock:
+        _cleanup_sessions()
+
+        is_new = True
+        session_id = req.session_id
+
+        if session_id and session_id in _sessions:
+            entry = _sessions[session_id]
+            is_new = False
+        else:
+            session_id = uuid.uuid4().hex[:12]
+            entry = {
+                "session": ChatSession(top_k=req.top_k),
+                "last_used": time.monotonic(),
+            }
+            _sessions[session_id] = entry
+
+        entry["last_used"] = time.monotonic()
+        session = entry["session"]
+
+    answer = session.ask(req.message, top_k=req.top_k)
+
+    return ChatResponse(
+        session_id=session_id,
+        question=req.message,
+        answer=answer,
+        is_new_session=is_new,
+    )
+
+
+@app.post("/chat/stream")
+def chat_stream(req: ChatRequest):
+    from legacylens.rag.session import ChatSession
+
+    with _lock:
+        _cleanup_sessions()
+
+        is_new = True
+        session_id = req.session_id
+
+        if session_id and session_id in _sessions:
+            entry = _sessions[session_id]
+            is_new = False
+        else:
+            session_id = uuid.uuid4().hex[:12]
+            entry = {
+                "session": ChatSession(top_k=req.top_k),
+                "last_used": time.monotonic(),
+            }
+            _sessions[session_id] = entry
+
+        entry["last_used"] = time.monotonic()
+        session = entry["session"]
+
+    def event_generator():
+        yield f"data: {json.dumps({'type': 'session', 'session_id': session_id, 'is_new_session': is_new})}\n\n"
+        retrieval_sent = False
+        for delta in session.ask_stream(req.message, top_k=req.top_k):
+            if not retrieval_sent:
+                # Retrieval has completed by the time the first delta arrives.
+                chunk_count = len(session._last_chunks)
+                yield f"data: {json.dumps({'type': 'retrieval', 'chunk_count': chunk_count})}\n\n"
+                retrieval_sent = True
+            yield f"data: {json.dumps({'type': 'delta', 'content': delta})}\n\n"
+        yield f"data: {json.dumps({'type': 'done'})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@app.delete("/chat/{session_id}")
+def delete_chat_session(session_id: str):
+    with _lock:
+        entry = _sessions.pop(session_id, None)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    entry["session"].close()
+    return {"status": "ok", "session_id": session_id}

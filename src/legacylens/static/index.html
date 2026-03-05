@@ -326,50 +326,56 @@ body {
     </div>
 
     <!-- Mode selector buttons (radio-style, one active at a time) -->
-    <div class="mt-3 grid grid-cols-4 gap-2 relative flex-shrink-0">
-        <div class="mode-btn active aspect-square distressed-border rounded flex flex-col items-center justify-center hover:brightness-125 cursor-pointer gap-1" data-mode="explain" title="Explain code purpose, logic, and behavior">
+    <div class="mt-3 grid grid-cols-4 gap-1.5 relative flex-shrink-0">
+        <div class="mode-btn active distressed-border rounded flex flex-col items-center justify-center hover:brightness-125 cursor-pointer gap-0.5 py-2" data-mode="explain" title="Explain code purpose, logic, and behavior">
             <span class="material-symbols-outlined text-[var(--phosphor-green)] text-2xl">psychology</span>
-            <span class="mode-label text-[13px] phosphor-glow uppercase tracking-wider relative z-10">Explain</span>
+            <span class="mode-label text-[15px] phosphor-glow uppercase tracking-wider relative z-10">Explain</span>
         </div>
-        <div class="mode-btn aspect-square distressed-border rounded flex flex-col items-center justify-center hover:brightness-125 cursor-pointer gap-1" data-mode="deps" title="Map dependencies and call chains">
+        <div class="mode-btn distressed-border rounded flex flex-col items-center justify-center hover:brightness-125 cursor-pointer gap-0.5 py-2" data-mode="deps" title="Map dependencies and call chains">
             <span class="material-symbols-outlined text-[var(--phosphor-green)] text-2xl">hub</span>
-            <span class="mode-label text-[13px] phosphor-glow uppercase tracking-wider opacity-50 relative z-10">Deps</span>
+            <span class="mode-label text-[15px] phosphor-glow uppercase tracking-wider opacity-50 relative z-10">Deps</span>
         </div>
-        <div class="mode-btn aspect-square distressed-border rounded flex flex-col items-center justify-center hover:brightness-125 cursor-pointer gap-1" data-mode="docs" title="Generate modern documentation with params and examples">
+        <div class="mode-btn distressed-border rounded flex flex-col items-center justify-center hover:brightness-125 cursor-pointer gap-0.5 py-2" data-mode="docs" title="Generate modern documentation with params and examples">
             <span class="material-symbols-outlined text-[var(--phosphor-green)] text-2xl">description</span>
-            <span class="mode-label text-[13px] phosphor-glow uppercase tracking-wider opacity-50 relative z-10">Docs</span>
+            <span class="mode-label text-[15px] phosphor-glow uppercase tracking-wider opacity-50 relative z-10">Docs</span>
         </div>
-        <div class="mode-btn aspect-square distressed-border rounded flex flex-col items-center justify-center hover:brightness-125 cursor-pointer gap-1" data-mode="business_logic" title="Extract business rules and domain logic">
+        <div class="mode-btn distressed-border rounded flex flex-col items-center justify-center hover:brightness-125 cursor-pointer gap-0.5 py-2" data-mode="business_logic" title="Extract business rules and domain logic">
             <span class="material-symbols-outlined text-[var(--phosphor-green)] text-2xl">rule</span>
-            <span class="mode-label text-[13px] phosphor-glow uppercase tracking-wider opacity-50 relative z-10">Logic</span>
+            <span class="mode-label text-[15px] phosphor-glow uppercase tracking-wider opacity-50 relative z-10">Logic</span>
         </div>
     </div>
 
-    <!-- Query Flags — single row -->
-    <div class="mt-2 flex-shrink-0 distressed-border rounded px-3 py-1.5 flex items-center justify-between" style="overflow: visible;">
+    <!-- Query Flags — icon, input/toggle, label stacked vertically -->
+    <div class="mt-2 flex-shrink-0 distressed-border rounded px-3 py-2 flex items-start justify-between" style="overflow: visible;">
         <!-- --top-k -->
-        <span class="phosphor-glow text-[11px] uppercase tracking-wider relative z-10 flex items-center justify-center gap-2" style="flex: 0 0 40%;">
-            <span class="material-symbols-outlined text-[var(--phosphor-green)] text-sm flag-icon">filter_list</span>
-            <span class="flag-label-full">--top-k <span class="opacity-50">(# results)</span></span>
-            <input id="flag-top-k" type="number" min="1" max="20" value="5" class="w-10 bg-black/80 border border-[var(--phosphor-green)]/30 rounded px-1 py-0.5 text-center font-mono text-[11px] phosphor-glow focus:ring-0 focus:border-[var(--phosphor-green)]/60">
+        <span class="phosphor-glow relative z-10 flex flex-col items-center gap-1.5">
+            <span class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-[var(--phosphor-green)] text-xl">filter_list</span>
+                <input id="flag-top-k" type="number" min="1" max="20" value="5" class="w-10 bg-black/80 border border-[var(--phosphor-green)]/30 rounded px-1 py-0.5 text-center font-mono text-[15px] phosphor-glow focus:ring-0 focus:border-[var(--phosphor-green)]/60">
+            </span>
+            <span class="flag-label-full text-[15px] uppercase tracking-wider opacity-50">--top-k</span>
         </span>
-        <span class="flag-divider opacity-30 text-[var(--phosphor-green)]">|</span>
+        <span class="opacity-20 text-[var(--phosphor-green)] mt-3">|</span>
         <!-- --no-answer -->
-        <span id="toggle-no-answer" class="relative z-10 flex items-center justify-center gap-1.5 cursor-pointer phosphor-glow text-[11px] uppercase tracking-wider">
-            <span class="material-symbols-outlined text-[var(--phosphor-green)] text-sm flag-icon">speed</span>
-            <span class="flag-label-full">--no-answer</span>
-            <div class="w-8 h-4 rounded-full relative flex-shrink-0" style="background: #1a1c1d; border: 1px solid #3d3f41;">
-                <div id="thumb-no-answer" class="w-3 h-3 rounded-full absolute top-0.5 transition-all duration-150" style="left: 2px; background: #555;"></div>
-            </div>
+        <span id="toggle-no-answer" class="relative z-10 flex flex-col items-center gap-1.5 cursor-pointer phosphor-glow">
+            <span class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-[var(--phosphor-green)] text-xl">speed</span>
+                <div class="w-10 h-5 rounded-full relative flex-shrink-0" style="background: #1a1c1d; border: 1px solid #3d3f41;">
+                    <div id="thumb-no-answer" class="w-4 h-4 rounded-full absolute top-0.5 transition-all duration-150" style="left: 2px; background: #555;"></div>
+                </div>
+            </span>
+            <span class="flag-label-full text-[15px] uppercase tracking-wider opacity-50">--no-answer</span>
         </span>
-        <span class="flag-divider opacity-30 text-[var(--phosphor-green)]">|</span>
+        <span class="opacity-20 text-[var(--phosphor-green)] mt-3">|</span>
         <!-- --show-code -->
-        <span id="toggle-show-code" class="relative z-10 flex items-center justify-center gap-1.5 cursor-pointer phosphor-glow text-[11px] uppercase tracking-wider">
-            <span class="material-symbols-outlined text-[var(--phosphor-green)] text-sm flag-icon">code</span>
-            <span class="flag-label-full">--show-code</span>
-            <div class="w-8 h-4 rounded-full relative flex-shrink-0" style="background: #1a1c1d; border: 1px solid #3d3f41;">
-                <div id="thumb-show-code" class="w-3 h-3 rounded-full absolute top-0.5 transition-all duration-150" style="left: 2px; background: #555;"></div>
-            </div>
+        <span id="toggle-show-code" class="relative z-10 flex flex-col items-center gap-1.5 cursor-pointer phosphor-glow">
+            <span class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-[var(--phosphor-green)] text-xl">code</span>
+                <div class="w-10 h-5 rounded-full relative flex-shrink-0" style="background: #1a1c1d; border: 1px solid #3d3f41;">
+                    <div id="thumb-show-code" class="w-4 h-4 rounded-full absolute top-0.5 transition-all duration-150" style="left: 2px; background: #555;"></div>
+                </div>
+            </span>
+            <span class="flag-label-full text-[15px] uppercase tracking-wider opacity-50">--show-code</span>
         </span>
     </div>
 </aside>
@@ -486,10 +492,13 @@ body {
 
 <script>
 (function() {
-    const queryHistory = [];
+    const chatSessions = [];  // {label, mode, sessionId, pairs}
+    let activeChatIdx = -1;   // index into chatSessions, -1 = none
     let isResultsView = false;
     let flagNoAnswer = false;
     let flagShowCode = false;
+    let currentSessionId = null;
+    let conversationPairs = [];
 
     // DOM elements
     const commandInput = document.getElementById('command-input');
@@ -516,14 +525,14 @@ body {
     toggleNoAnswer.addEventListener('click', function() {
         flagNoAnswer = !flagNoAnswer;
         var track = toggleNoAnswer.querySelector('div');
-        thumbNoAnswer.style.left = flagNoAnswer ? '17px' : '2px';
+        thumbNoAnswer.style.left = flagNoAnswer ? '22px' : '2px';
         thumbNoAnswer.style.background = flagNoAnswer ? 'var(--phosphor-green)' : '#555';
         track.style.borderColor = flagNoAnswer ? 'var(--phosphor-green)' : '#3d3f41';
     });
     toggleShowCode.addEventListener('click', function() {
         flagShowCode = !flagShowCode;
         var track = toggleShowCode.querySelector('div');
-        thumbShowCode.style.left = flagShowCode ? '17px' : '2px';
+        thumbShowCode.style.left = flagShowCode ? '22px' : '2px';
         thumbShowCode.style.background = flagShowCode ? 'var(--phosphor-green)' : '#555';
         track.style.borderColor = flagShowCode ? 'var(--phosphor-green)' : '#3d3f41';
     });
@@ -665,6 +674,7 @@ body {
         btn.addEventListener('click', function() {
             const mode = this.getAttribute('data-mode');
             if (mode === activeMode) return;
+            if (currentSessionId) return; // locked during active conversation
 
             // Deactivate all, activate clicked
             document.querySelectorAll('.mode-btn').forEach(function(b) {
@@ -689,8 +699,61 @@ body {
         document.getElementById('badge-label').textContent = modeLabels[activeMode];
     }
 
+    var _streamingAutoScroll = false;
+    var _scrollContainer = null;
+    var _isStreaming = false;
+
+    function renderConversation() {
+        var html = '';
+        conversationPairs.forEach(function(pair) {
+            html += '<div class="mb-6">';
+            html += '<div class="opacity-60 text-base uppercase tracking-widest mb-1">Operator</div>';
+            html += '<div class="mb-3 border-l-2 border-[var(--neon-pink)]/40 pl-3 opacity-80">&gt; ' + escapeHtml(pair.question) + '</div>';
+            html += '<div class="opacity-60 text-base uppercase tracking-widest mb-1">LegacyLens</div>';
+            if (pair.answer === null) {
+                html += '<p class="opacity-50 animate-pulse">Processing query...</p>';
+            } else if (pair.error) {
+                html += '<p class="text-red-500">ERROR: ' + escapeHtml(pair.answer) + '</p>';
+            } else {
+                var rendered = (typeof marked !== 'undefined' && marked.parse) ? marked.parse(pair.answer) : '<pre class="whitespace-pre-wrap">' + escapeHtml(pair.answer) + '</pre>';
+                html += '<div>' + rendered + '</div>';
+            }
+            html += '</div>';
+        });
+        resultsContent.innerHTML = html;
+        if (!_scrollContainer) _scrollContainer = resultsContent.parentElement;
+        if (_streamingAutoScroll) {
+            _scrollContainer.scrollTop = _scrollContainer.scrollHeight;
+        }
+    }
+
+    // When user scrolls during streaming and reaches near the bottom, engage auto-scroll
+    setTimeout(function() {
+        _scrollContainer = resultsContent.parentElement;
+        var _lastScrollTop = 0;
+        _scrollContainer.addEventListener('scroll', function() {
+            if (!_isStreaming) return;
+            var st = _scrollContainer.scrollTop;
+            // Any upward scroll immediately disengages auto-scroll
+            if (st < _lastScrollTop) {
+                _streamingAutoScroll = false;
+            }
+            // Only re-engage when user is within 20px of the very bottom
+            if (!_streamingAutoScroll) {
+                var atBottom = st + _scrollContainer.clientHeight >= _scrollContainer.scrollHeight - 20;
+                if (atBottom) _streamingAutoScroll = true;
+            }
+            _lastScrollTop = st;
+        });
+    }, 0);
+
     function showIdleView() {
         isResultsView = false;
+        // Save current chat before clearing
+        saveActiveChat();
+        currentSessionId = null;
+        conversationPairs = [];
+        activeChatIdx = -1;
         resultsView.classList.add('hidden');
         idleView.classList.remove('hidden');
         idleView.classList.add('view-fade-enter');
@@ -737,16 +800,32 @@ body {
         operatorInput.textContent = '"' + query + '"';
     }
 
-    function updateQueryHistory() {
-        if (queryHistory.length === 0) return;
+    function saveActiveChat() {
+        if (activeChatIdx >= 0 && activeChatIdx < chatSessions.length) {
+            chatSessions[activeChatIdx].pairs = conversationPairs.slice();
+            chatSessions[activeChatIdx].sessionId = currentSessionId;
+        }
+    }
+
+    function updateChatHistory() {
+        if (chatSessions.length === 0) return;
         queryHistoryList.innerHTML = '';
-        queryHistory.slice().reverse().forEach(function(entry, i) {
+        chatSessions.slice().reverse().forEach(function(entry, revIdx) {
+            var realIdx = chatSessions.length - 1 - revIdx;
             const li = document.createElement('li');
-            li.className = 'cursor-pointer hover:brightness-125 transition-all truncate flex items-center gap-1.5';
-            li.innerHTML = '<span class="material-symbols-outlined text-base flex-shrink-0">' + modeIcons[entry.mode] + '</span> ' + entry.query;
-            li.title = entry.query + ' [' + entry.mode.toUpperCase() + ']';
+            var activeClass = realIdx === activeChatIdx ? ' brightness-125' : '';
+            li.className = 'cursor-pointer hover:brightness-125 transition-all truncate flex items-center gap-1.5' + activeClass;
+            li.innerHTML = '<span class="material-symbols-outlined text-base flex-shrink-0">' + modeIcons[entry.mode] + '</span> ' + escapeHtml(entry.label);
+            li.title = entry.label + ' [' + entry.mode.toUpperCase() + ']';
             li.addEventListener('click', function() {
-                // Restore the original mode
+                if (realIdx === activeChatIdx) return;
+                // Save current conversation
+                saveActiveChat();
+                // Restore clicked session
+                activeChatIdx = realIdx;
+                currentSessionId = entry.sessionId;
+                conversationPairs = entry.pairs.slice();
+                // Restore mode
                 if (entry.mode !== activeMode) {
                     document.querySelectorAll('.mode-btn').forEach(function(b) {
                         b.classList.remove('active');
@@ -758,7 +837,12 @@ body {
                     activeMode = entry.mode;
                     renderModeAlert();
                 }
-                submitQuery(entry.query);
+                // Show conversation
+                if (!isResultsView) showResultsView();
+                var truncated = entry.label.length > 40 ? entry.label.substring(0, 40) + '...' : entry.label;
+                resultsTitle.textContent = 'SESSION: ' + truncated.toUpperCase();
+                renderConversation();
+                updateChatHistory();
             });
             queryHistoryList.appendChild(li);
         });
@@ -781,25 +865,16 @@ body {
         stageRerank.querySelector('span:last-child').className = 'opacity-50';
         progressBar.style.width = '0%';
 
-        // Stage 1: Vector search
-        stageVector.querySelector('span:last-child').textContent = 'ACTIVE';
-        stageVector.querySelector('span:last-child').className = 'text-yellow-400';
+        // Stage 1: Vector search — stays ACTIVE until real retrieval event arrives
+        var vectorStatus = stageVector.querySelector('span:last-child');
+        vectorStatus.textContent = '';
+        vectorStatus.className = 'text-yellow-400 dots-blink';
         progressBar.style.width = '15%';
 
-        await delay(600);
-        stageVector.querySelector('span:last-child').textContent = 'COMPLETED';
-        stageVector.querySelector('span:last-child').className = '';
-        progressBar.style.width = '33%';
-
         // Stage 2: LLM inference
-        stageLlm.querySelector('span:last-child').textContent = 'ACTIVE';
-        stageLlm.querySelector('span:last-child').className = 'text-yellow-400';
-        progressBar.style.width = '50%';
-
-        // Stage 3: Rerank goes active with blinking dots
-        var rerankSpan = stageRerank.querySelector('span:last-child');
-        rerankSpan.textContent = '';
-        rerankSpan.className = 'text-yellow-400 dots-blink';
+        stageLlm.querySelector('span:last-child').textContent = 'STANDBY';
+        stageLlm.querySelector('span:last-child').className = 'opacity-50';
+        progressBar.style.width = '15%';
 
         return { stageLlm, stageRerank };
     }
@@ -816,11 +891,14 @@ body {
     }
 
     async function submitQuery(query) {
-        // Add to history (avoid duplicates at top)
-        const existingIdx = queryHistory.findIndex(function(e) { return e.query === query; });
-        if (existingIdx !== -1) queryHistory.splice(existingIdx, 1);
-        queryHistory.push({ query: query, mode: activeMode });
-        updateQueryHistory();
+        // On first message of a new conversation, save previous and create entry
+        var isFirstMessage = (currentSessionId === null && conversationPairs.length === 0);
+        if (isFirstMessage) {
+            saveActiveChat();
+            chatSessions.push({ label: query, mode: activeMode, sessionId: null, pairs: [] });
+            activeChatIdx = chatSessions.length - 1;
+            updateChatHistory();
+        }
 
         // Update operator input
         updateOperatorInput(query);
@@ -828,85 +906,121 @@ body {
         // Switch to results view
         if (!isResultsView) showResultsView();
 
-        // Show loading in results
-        resultsContent.innerHTML = '<p class="opacity-50 animate-pulse">Processing query...</p>';
-        resultsTitle.textContent = 'ROUTINE DATA: ---';
+        // Push pending pair and render loading state
+        var pairIdx = conversationPairs.length;
+        conversationPairs.push({ question: query, answer: null, error: false });
+        _streamingAutoScroll = false;
+        _isStreaming = false;
+        renderConversation();
+
+        // Set title to truncated first question
+        if (pairIdx === 0) {
+            var truncated = query.length > 40 ? query.substring(0, 40) + '...' : query;
+            resultsTitle.textContent = 'SESSION: ' + truncated.toUpperCase();
+        }
         resultsStream.textContent = 'ENCRYPTED STREAM 0x' + Math.random().toString(16).substring(2, 6).toUpperCase();
 
         // Animate pipeline
         const stages = await animatePipeline();
         const startTime = performance.now();
 
-        // Call API
+        // Call streaming chat API
         try {
-            const res = await fetch('/query', {
+            const res = await fetch('/chat/stream', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ question: query, top_k: parseInt(flagTopK.value) || 5, mode: activeMode, no_answer: flagNoAnswer, show_code: flagShowCode })
+                body: JSON.stringify({ message: query, session_id: currentSessionId, top_k: parseInt(flagTopK.value) || 5, mode: activeMode })
             });
 
-            const elapsed = (performance.now() - startTime) / 1000;
-
             if (!res.ok) {
+                const elapsed = (performance.now() - startTime) / 1000;
                 const err = await res.json().catch(() => ({ detail: 'Request failed' }));
                 completePipeline(stages, elapsed);
-                resultsContent.innerHTML = '<p class="text-red-500">ERROR: ' + escapeHtml(err.detail || 'Unknown error') + '</p>';
+                conversationPairs[pairIdx].answer = err.detail || 'Unknown error';
+                conversationPairs[pairIdx].error = true;
+                renderConversation();
                 return;
             }
 
-            const data = await res.json();
-            completePipeline(stages, elapsed);
+            var pipelineCompleted = false;
+            var renderQueued = false;
+            var fullAnswer = '';
+            var reader = res.body.getReader();
+            var decoder = new TextDecoder();
+            var buffer = '';
 
-            // Update title with first chunk's unit name
-            if (data.chunks && data.chunks.length > 0) {
-                resultsTitle.textContent = 'ROUTINE DATA: ' + data.chunks[0].unit_name.toUpperCase();
-            }
-
-            // Render results based on flags
-            var html = '';
-            if (flagNoAnswer) {
-                // No-answer mode: render chunk list
-                html = '<div class="mb-4 opacity-60 text-[18px] uppercase tracking-wider">Retrieval Results (' + data.chunks.length + ' chunks)</div>';
-                data.chunks.forEach(function(chunk, i) {
-                    html += '<div class="mb-4 border border-[var(--phosphor-green)]/20 rounded p-3">' +
-                        '<div class="flex justify-between items-start mb-1">' +
-                        '<span class="text-[var(--phosphor-green)] font-bold">' + escapeHtml(chunk.unit_name) + '</span>' +
-                        '<span class="opacity-50 text-[14px]">score: ' + chunk.score.toFixed(3) + '</span></div>' +
-                        '<div class="opacity-60 text-[16px]">' + escapeHtml(chunk.file_path) + ' : ' + chunk.start_line + '-' + chunk.end_line + '</div>' +
-                        '<div class="opacity-70 text-[18px] mt-1">' + escapeHtml(chunk.purpose) + '</div>';
-                    if (flagShowCode && chunk.snippet) {
-                        html += '<pre class="mt-2 bg-black/50 border border-[var(--phosphor-green)]/10 rounded p-2 text-[16px] overflow-x-auto whitespace-pre">' + escapeHtml(chunk.snippet) + '</pre>';
-                    }
-                    html += '</div>';
-                });
-            } else {
-                // Normal mode: render markdown answer
-                if (typeof marked !== 'undefined' && marked.parse) {
-                    html = marked.parse(data.answer);
-                } else {
-                    html = '<pre class="whitespace-pre-wrap">' + escapeHtml(data.answer) + '</pre>';
-                }
-                // Append source snippets if show-code is on
-                if (flagShowCode && data.chunks) {
-                    html += '<div class="mt-6 border-t border-[var(--phosphor-green)]/20 pt-4">' +
-                        '<div class="mb-3 opacity-60 text-[18px] uppercase tracking-wider">Source Snippets</div>';
-                    data.chunks.forEach(function(chunk) {
-                        if (chunk.snippet) {
-                            html += '<div class="mb-3">' +
-                                '<div class="text-[var(--phosphor-green)] text-[16px] mb-1">' + escapeHtml(chunk.unit_name) + ' — ' + escapeHtml(chunk.file_path) + ':' + chunk.start_line + '-' + chunk.end_line + '</div>' +
-                                '<pre class="bg-black/50 border border-[var(--phosphor-green)]/10 rounded p-2 text-[16px] overflow-x-auto whitespace-pre">' + escapeHtml(chunk.snippet) + '</pre>' +
-                                '</div>';
-                        }
+            function scheduleRender() {
+                if (!renderQueued) {
+                    renderQueued = true;
+                    requestAnimationFrame(function() {
+                        renderQueued = false;
+                        renderConversation();
                     });
-                    html += '</div>';
                 }
             }
-            resultsContent.innerHTML = html;
+
+            while (true) {
+                var chunk = await reader.read();
+                if (chunk.done) break;
+                buffer += decoder.decode(chunk.value, { stream: true });
+
+                var lines = buffer.split('\n\n');
+                buffer = lines.pop() || '';
+
+                for (var li = 0; li < lines.length; li++) {
+                    var line = lines[li].trim();
+                    if (!line.startsWith('data: ')) continue;
+                    try {
+                        var evt = JSON.parse(line.substring(6));
+                        if (evt.type === 'session') {
+                            currentSessionId = evt.session_id;
+                            if (activeChatIdx >= 0) chatSessions[activeChatIdx].sessionId = currentSessionId;
+                        } else if (evt.type === 'retrieval') {
+                            var stageVec = document.getElementById('stage-vector');
+                            var vecStatus = stageVec.querySelector('span:last-child');
+                            vecStatus.className = '';
+                            if (evt.chunk_count > 0) {
+                                vecStatus.innerHTML = '<span class="text-[var(--phosphor-green)]">&#x2713; ' + evt.chunk_count + ' chunks</span>';
+                            } else {
+                                vecStatus.innerHTML = '<span class="opacity-50">0 chunks</span>';
+                            }
+                            // Advance pipeline: activate LLM stage
+                            var stageLlm2 = document.getElementById('stage-llm');
+                            stageLlm2.querySelector('span:last-child').textContent = 'ACTIVE';
+                            stageLlm2.querySelector('span:last-child').className = 'text-yellow-400';
+                            progressBar.style.width = '50%';
+                        } else if (evt.type === 'delta') {
+                            if (!fullAnswer) {
+                                // First delta — record time-to-first-token and complete pipeline
+                                var ttft = (performance.now() - startTime) / 1000;
+                                completePipeline(stages, ttft);
+                                pipelineCompleted = true;
+                                _isStreaming = true;
+                            }
+                            fullAnswer += evt.content;
+                            conversationPairs[pairIdx].answer = fullAnswer;
+                            scheduleRender();
+                        } else if (evt.type === 'done') {
+                            _isStreaming = false;
+                            if (!pipelineCompleted) {
+                                var elapsed2 = (performance.now() - startTime) / 1000;
+                                completePipeline(stages, elapsed2);
+                                pipelineCompleted = true;
+                            }
+                        }
+                    } catch (parseErr) { /* ignore malformed SSE lines */ }
+                }
+            }
+            // Final render to ensure complete answer is displayed
+            renderConversation();
+            saveActiveChat();
 
         } catch (err) {
-            const elapsed = (performance.now() - startTime) / 1000;
+            var elapsed = (performance.now() - startTime) / 1000;
             completePipeline(stages, elapsed);
-            resultsContent.innerHTML = '<p class="text-red-500">CONNECTION ERROR: ' + escapeHtml(err.message) + '</p>';
+            conversationPairs[pairIdx].answer = err.message;
+            conversationPairs[pairIdx].error = true;
+            renderConversation();
         }
     }
 

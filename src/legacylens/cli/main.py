@@ -218,6 +218,48 @@ def stats() -> None:
 
 
 @app.command()
+def chat(
+    top_k: int = typer.Option(5, "--top-k", "-k", help="Number of results to retrieve"),
+) -> None:
+    """Interactive multi-turn chat about the codebase."""
+    from legacylens.rag.session import ChatSession
+
+    console.print(
+        Panel(
+            "[bold]LegacyLens Chat[/]\nType [cyan]exit[/] or [cyan]quit[/] to end, "
+            "[cyan]reset[/] to clear history.",
+            border_style="blue",
+        )
+    )
+
+    with ChatSession(top_k=top_k) as session:
+        while True:
+            try:
+                question = console.input("\n[bold]You:[/] ").strip()
+            except (EOFError, KeyboardInterrupt):
+                break
+
+            if not question:
+                continue
+            if question.lower() in ("exit", "quit"):
+                break
+            if question.lower() == "reset":
+                session.reset()
+                console.print("[dim]Session reset.[/]")
+                continue
+
+            with console.status("Thinking..."):
+                answer = session.ask(question)
+
+            console.print()
+            console.print(
+                Panel(Markdown(answer), title="[bold green]LegacyLens[/]", border_style="green")
+            )
+
+    console.print("\n[dim]Goodbye![/]")
+
+
+@app.command()
 def serve(
     port: int = typer.Option(8000, "--port", "-p", help="Port to run the API server on"),
     host: str = typer.Option("0.0.0.0", "--host", help="Host to bind to"),
