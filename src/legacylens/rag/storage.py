@@ -44,22 +44,26 @@ def get_index():
 
 def upsert_vectors(
     vectors: list[tuple[str, list[float], dict]],
+    namespace: str | None = None,
 ) -> int:
     """Upsert vectors to Pinecone.
 
     Args:
         vectors: List of (id, embedding, metadata) tuples.
+        namespace: Pinecone namespace for source isolation.
 
     Returns:
         Number of vectors upserted.
     """
     index = get_index()
-    # Pinecone supports batch upsert of up to 100 vectors
     batch_size = 100
     total = 0
+    kwargs = {}
+    if namespace:
+        kwargs["namespace"] = namespace
     for i in range(0, len(vectors), batch_size):
         batch = vectors[i : i + batch_size]
-        index.upsert(vectors=batch)
+        index.upsert(vectors=batch, **kwargs)
         total += len(batch)
     return total
 
@@ -68,6 +72,7 @@ def query_vectors(
     embedding: list[float],
     top_k: int = 5,
     filter: dict | None = None,
+    namespace: str | None = None,
 ) -> list[dict]:
     """Query Pinecone for similar vectors.
 
@@ -75,12 +80,16 @@ def query_vectors(
         List of matches with id, score, and metadata.
     """
     index = get_index()
-    results = index.query(
-        vector=embedding,
-        top_k=top_k,
-        include_metadata=True,
-        filter=filter,
-    )
+    kwargs = {
+        "vector": embedding,
+        "top_k": top_k,
+        "include_metadata": True,
+    }
+    if filter:
+        kwargs["filter"] = filter
+    if namespace:
+        kwargs["namespace"] = namespace
+    results = index.query(**kwargs)
     return [
         {
             "id": match.id,
@@ -133,18 +142,29 @@ def list_vectors(prefix: str = "", limit: int = 100) -> list[str]:
     return ids[:limit]
 
 
-def fetch_vectors(ids: list[str]) -> dict:
+def fetch_vectors(ids: list[str], namespace: str | None = None) -> dict:
     """Fetch vectors by ID.
 
     Args:
         ids: List of vector IDs to fetch.
+        namespace: Pinecone namespace.
 
     Returns:
         Dict of id -> vector data (with metadata).
     """
     index = get_index()
-    result = index.fetch(ids=ids)
+    kwargs = {"ids": ids}
+    if namespace:
+        kwargs["namespace"] = namespace
+    result = index.fetch(**kwargs)
     return result.vectors
+
+
+def delete_namespace(namespace: str) -> bool:
+    """Delete all vectors in a namespace. Returns True if completed."""
+    index = get_index()
+    index.delete(delete_all=True, namespace=namespace)
+    return True
 
 
 def delete_index() -> bool:

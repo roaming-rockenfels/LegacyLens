@@ -132,28 +132,36 @@ def _chat_completion_stream(
                 continue
 
 
-SYSTEM_PROMPT = """You are LegacyLens, an expert assistant for understanding legacy Fortran codebases (specifically LAPACK — Linear Algebra PACKage).
+SYSTEM_PROMPT = """You are LegacyLens, an expert assistant for understanding legacy codebases.
 
-You help developers understand, navigate, and work with legacy Fortran code.
+You help developers understand, navigate, and work with legacy code across multiple languages.
 
 Guidelines:
-- When code context is provided, base your answer on it. Reference specific subroutine/function names, quote key snippets in ```fortran blocks, and explain call chains.
-- Source code in the context has line numbers prefixed as "  LINE | CODE". When you quote code, you MUST keep the line-number prefixes inside the ```fortran block exactly as they appear in the context. For example:
+- When code context is provided, base your answer on it. Reference specific function/class names, quote key snippets in fenced code blocks with the appropriate language tag, and explain call chains.
+- Source code in the context has line numbers prefixed as "  LINE | CODE". When you quote code, you MUST keep the line-number prefixes inside the fenced code block exactly as they appear in the context. For example:
   **`dgesv.f:140-145`**
   ```fortran
    140 |       CALL DGETRF( N, N, A, LDA, IPIV, INFO )
    141 |       IF( INFO.EQ.0 ) THEN
   ```
   Never strip the "N | " prefix from quoted lines.
-- When no code context is available, answer using your knowledge of LAPACK, Fortran, and numerical linear algebra. Cite authoritative sources as markdown links (e.g. [LAPACK Users' Guide](https://netlib.org/lapack/lug/), [netlib.org](https://netlib.org/lapack/explore-html/), Intel MKL docs).
-- Explain Fortran concepts in modern programming terms when helpful.
+- When no code context is available, answer using your expertise in the relevant language and domain. Cite authoritative sources where applicable.
+- Explain language-specific concepts in modern programming terms when helpful.
 - Describe both what the code does and why.
-- Use clear, concise language for developers who may not know Fortran.
+- Use clear, concise language for developers who may not know the original language.
 """
 
 
-def build_context(results: list[dict]) -> str:
-    """Build context string from retrieval results."""
+def build_context(results: list[dict], source_dir: str | None = None) -> str:
+    """Build context string from retrieval results.
+
+    Args:
+        results: Retrieved chunks from Pinecone.
+        source_dir: Base directory of the ingested source (for reading snippets).
+    """
+    from pathlib import Path
+
+    base_dir = Path(source_dir) if source_dir else None
     parts = []
     for i, match in enumerate(results, 1):
         meta = match.get("metadata", {})
@@ -178,13 +186,14 @@ Calls: {', '.join(calls) if calls else 'none'}
 """
         # Append actual source code with line numbers when available
         if isinstance(start_line, int) and isinstance(end_line, int):
-            snippet = read_source_snippet(file_path, start_line, end_line)
+            snippet = read_source_snippet(file_path, start_line, end_line, base_dir=base_dir)
             if snippet:
                 numbered_lines = []
                 for line_no, line in enumerate(snippet.splitlines(), start=start_line):
                     numbered_lines.append(f"{line_no:>6} | {line}")
                 numbered_snippet = "\n".join(numbered_lines)
-                chunk_text += f"\nSource:\n```fortran\n{numbered_snippet}\n```\n"
+                lang_tag = meta.get("language", "text")
+                chunk_text += f"\nSource:\n```{lang_tag}\n{numbered_snippet}\n```\n"
 
         parts.append(chunk_text)
 
@@ -196,6 +205,7 @@ def generate_answer(
     results: list[dict],
     model: str = DEFAULT_MODEL,
     mode: str = "explain",
+    source_dir: str | None = None,
 ) -> str:
     """Generate an answer using Claude (via OpenRouter) based on retrieved code chunks.
 
@@ -204,11 +214,12 @@ def generate_answer(
         results: Retrieved chunks from Pinecone.
         model: Model to use (OpenRouter model ID).
         mode: Response mode — "explain", "deps", "docs", or "business_logic".
+        source_dir: Base directory of the ingested source (for reading snippets).
 
     Returns:
         Generated answer text.
     """
-    context = build_context(results)
+    context = build_context(results, source_dir=source_dir)
 
     mode_instructions = {
         "explain": "Provide a clear explanation of what this code does, how it works, and why.",
@@ -220,7 +231,7 @@ def generate_answer(
     instruction = mode_instructions.get(mode, mode_instructions["explain"])
 
     if context:
-        user_message = f"""Here are relevant code chunks from the LAPACK Fortran codebase:
+        user_message = f"""Here are relevant code chunks from the codebase:
 
 {context}
 
@@ -228,7 +239,7 @@ Question: {question}
 
 {instruction}"""
     else:
-        user_message = f"""No code chunks were found in the codebase for this query. Answer using your expertise in LAPACK and Fortran, and cite authoritative web sources.
+        user_message = f"""No code chunks were found in the codebase for this query. Answer using your expertise and cite authoritative web sources.
 
 Question: {question}
 
@@ -250,13 +261,14 @@ def generate_answer_stream(
     results: list[dict],
     model: str = DEFAULT_MODEL,
     mode: str = "explain",
+    source_dir: str | None = None,
 ) -> Iterator[str]:
     """Stream an answer, yielding content deltas.
 
     Same as generate_answer but returns an iterator of token strings
     suitable for measuring time-to-first-token.
     """
-    context = build_context(results)
+    context = build_context(results, source_dir=source_dir)
 
     mode_instructions = {
         "explain": "Provide a clear explanation of what this code does, how it works, and why.",
@@ -268,7 +280,7 @@ def generate_answer_stream(
     instruction = mode_instructions.get(mode, mode_instructions["explain"])
 
     if context:
-        user_message = f"""Here are relevant code chunks from the LAPACK Fortran codebase:
+        user_message = f"""Here are relevant code chunks from the codebase:
 
 {context}
 
@@ -276,7 +288,7 @@ Question: {question}
 
 {instruction}"""
     else:
-        user_message = f"""No code chunks were found in the codebase for this query. Answer using your expertise in LAPACK and Fortran, and cite authoritative web sources.
+        user_message = f"""No code chunks were found in the codebase for this query. Answer using your expertise and cite authoritative web sources.
 
 Question: {question}
 

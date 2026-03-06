@@ -10,7 +10,8 @@ from rich.syntax import Syntax
 from rich.table import Table
 
 from legacylens.rag.embeddings import embed_query, _get_client as _get_voyage_client
-from legacylens.rag.storage import query_vectors
+from legacylens.rag.keyword_index import KeywordIndex
+from legacylens.rag.storage import fetch_vectors, query_vectors
 
 console = Console()
 
@@ -92,16 +93,60 @@ def _extract_fortran_entities(question: str) -> dict[str, list[str]]:
     return {"parameters": parameters, "routines": routines}
 
 
-def _base_routine_name(unit_name: str) -> str:
+# Python identifier patterns
+_RE_SNAKE_CASE = re.compile(r"\b([a-z][a-z0-9_]{2,30})\b")
+_RE_CAMEL_CASE = re.compile(r"\b([A-Z][a-z][a-zA-Z0-9]{1,30})\b")
+_RE_DOTTED_PATH = re.compile(r"\b([a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+)\b")
+
+_PYTHON_STOPWORDS = {
+    "the", "and", "for", "not", "are", "but", "how", "what", "does", "this",
+    "with", "from", "that", "which", "where", "when", "into", "each", "both",
+    "all", "its", "has", "use", "find", "show", "can", "why", "who", "will",
+    "get", "set", "put", "run", "let", "try", "was", "had", "been", "have",
+    "about", "class", "method", "function", "module", "import", "return",
+    "self", "none", "true", "false", "type", "list", "dict", "str", "int",
+}
+
+# Concept-to-decorator mapping for decorator-aware queries
+_DECORATOR_CONCEPTS = {
+    "validate": ["validator", "field_validator", "model_validator", "validate_call"],
+    "serialize": ["serializer", "field_serializer", "model_serializer"],
+    "config": ["dataclass", "ConfigDict"],
+}
+
+
+_RE_LEGACY_INTENT = re.compile(
+    r"\b(v1|legacy|compat|compatibility|migrate|migration|upgrade|upgrading|old\s+api)\b",
+    re.IGNORECASE,
+)
+
+
+def _query_wants_legacy(question: str) -> bool:
+    """Return True if the query explicitly asks about v1/legacy code."""
+    return bool(_RE_LEGACY_INTENT.search(question))
+
+
+def _extract_python_entities(question: str) -> dict[str, list[str]]:
+    """Detect Python-style identifiers in a query.
+
+    Returns:
+        Dict with "classes", "functions", and "modules" lists.
+    """
+    classes = [m for m in _RE_CAMEL_CASE.findall(question) if m.lower() not in _PYTHON_STOPWORDS]
+    functions = [m for m in _RE_SNAKE_CASE.findall(question) if m not in _PYTHON_STOPWORDS]
+    modules = _RE_DOTTED_PATH.findall(question)
+
+    return {"classes": classes, "functions": functions, "modules": modules}
+
+
+def _base_routine_name(unit_name: str, language: str = "fortran") -> str:
     """Strip the LAPACK precision prefix to get the base routine name.
 
-    Examples:
-        DGESV  → GESV
-        SLAQZ0 → LAQZ0
-        CLAQZ0 → LAQZ0
-        XERBLA → XERBLA  (no precision prefix)
+    Only applies SDCZ stripping for Fortran. For other languages, returns as-is.
     """
     if not unit_name:
+        return unit_name
+    if language != "fortran":
         return unit_name
     name = unit_name.upper()
     if len(name) >= 2 and name[0] in "SDCZ" and name[1].isalpha():
@@ -115,24 +160,33 @@ def _diversify_results(results: list[dict], top_k: int) -> list[dict]:
     This prevents precision variants (SLAQZ0/DLAQZ0/CLAQZ0) from consuming
     multiple top_k slots. When variants collide, prefers the double-precision
     (D-prefix) form since that's the canonical reference in LAPACK docs.
+
+    For non-Fortran chunks, tier-based dedup collapses same-named units across
+    module tiers, preferring current over legacy/deprecated/internal.
     """
-    # First pass: collect best representative per base name
-    # For each base, keep the D-prefix variant if available, else the first seen
+    _TIER_PRIORITY = {"current": 0, "internal": 1, "deprecated": 2, "legacy": 3}
+
     base_to_result: dict[str, dict] = {}
     base_order: list[str] = []
 
     for r in results:
-        unit_name = r.get("metadata", {}).get("unit_name", "")
-        base = _base_routine_name(unit_name)
+        meta = r.get("metadata", {})
+        unit_name = meta.get("unit_name", "")
+        language = meta.get("language", "fortran")
+        base = _base_routine_name(unit_name, language=language)
 
         if base not in base_to_result:
             base_to_result[base] = r
             base_order.append(base)
-        elif unit_name and unit_name[0] == "D" and base_to_result[base].get("metadata", {}).get("unit_name", "")[0] != "D":
-            # Replace non-D variant with D variant
+        elif language == "fortran" and unit_name and unit_name[0] == "D" and base_to_result[base].get("metadata", {}).get("unit_name", "")[0] != "D":
             base_to_result[base] = r
+        else:
+            # Tier-based preference for Python/other languages
+            new_tier = _TIER_PRIORITY.get(meta.get("module_tier", "current"), 0)
+            old_tier = _TIER_PRIORITY.get(base_to_result[base].get("metadata", {}).get("module_tier", "current"), 0)
+            if new_tier < old_tier:
+                base_to_result[base] = r
 
-    # Second pass: emit in original order, capped at top_k
     diversified: list[dict] = []
     for base in base_order:
         diversified.append(base_to_result[base])
@@ -154,7 +208,12 @@ def _rerank_results(question: str, results: list[dict], top_k: int) -> list[dict
         documents = []
         for r in results:
             meta = r.get("metadata", {})
-            doc = f"{meta.get('unit_type', '')} {meta.get('unit_name', '')}: {meta.get('purpose', '')}"
+            doc = f"{meta.get('unit_type', '')} {meta.get('unit_name', '')}"
+            if meta.get("base_classes"):
+                doc += f" inherits {', '.join(meta['base_classes'])}"
+            if meta.get("decorators"):
+                doc += f" @{', @'.join(meta['decorators'])}"
+            doc += f": {meta.get('purpose', '')}"
             if meta.get("parameters"):
                 doc += f" Parameters: {', '.join(meta['parameters'][:10])}"
             if meta.get("calls"):
@@ -166,37 +225,37 @@ def _rerank_results(question: str, results: list[dict], top_k: int) -> list[dict
         return results[:top_k]
 
 
-def retrieve_with_metrics(question: str, top_k: int = 5, pin_unit: str | None = None) -> RetrievalResult:
+def retrieve_with_metrics(
+    question: str,
+    top_k: int = 5,
+    pin_unit: str | None = None,
+    namespace: str | None = None,
+    languages: list[str] | None = None,
+) -> RetrievalResult:
     """Retrieve relevant code chunks with instrumentation metrics.
-
-    Same pipeline as retrieve(), but returns a RetrievalResult with
-    both the results list and a RetrievalMetrics object.
 
     Args:
         question: Natural language query about the codebase.
         top_k: Number of results to return.
-        pin_unit: If set, ensure this unit_name appears in results
-                  by doing a filtered lookup first, then filling
-                  remaining slots with semantic search.
+        pin_unit: If set, ensure this unit_name appears in results.
+        namespace: Pinecone namespace to query (source isolation).
+        languages: Pre-scanned languages for this source (drives strategy).
 
     Returns:
         RetrievalResult with .results and .metrics.
     """
     metrics = RetrievalMetrics()
     embedding = embed_query(question)
+    ns = {"namespace": namespace} if namespace else {}
 
     if pin_unit:
-        # First: get the exact routine via metadata filter
         pinned = query_vectors(
-            embedding,
-            top_k=3,
+            embedding, top_k=3,
             filter={"unit_name": pin_unit.upper()},
+            **ns,
         )
+        semantic = query_vectors(embedding, top_k=top_k * 3, **ns)
 
-        # Then: get semantic results for surrounding context
-        semantic = query_vectors(embedding, top_k=top_k * 3)
-
-        # Merge: pinned first, then semantic (deduped + diversified)
         seen_ids = {r["id"] for r in pinned}
         merged = list(pinned)
         for r in semantic:
@@ -214,38 +273,75 @@ def retrieve_with_metrics(question: str, top_k: int = 5, pin_unit: str | None = 
             }
         return RetrievalResult(results=merged, metrics=metrics)
 
-    # Entity-filtered pass: detect Fortran identifiers in the query
-    # Uses dual queries (D-prefix + all-precision) to guarantee canonical results
-    entities = _extract_fortran_entities(question)
-    entity_results: list[dict] = []
+    # Language-aware entity extraction
+    use_fortran_strategy = not languages or "fortran" in languages
+    use_python_strategy = languages and "python" in languages and "fortran" not in languages
 
-    for param in entities.get("parameters", []):
-        # D-prefix query: guaranteed canonical (double-precision) results
-        entity_results.extend(
-            query_vectors(embedding, top_k=top_k, filter={"parameters": param, "precision": "double"})
-        )
-        # All-precision query: broader coverage
-        entity_results.extend(
-            query_vectors(embedding, top_k=top_k, filter={"parameters": param})
-        )
-    for routine in entities.get("routines", []):
-        # Get the routine itself (may have multiple chunks if split)
-        entity_results.extend(
-            query_vectors(embedding, top_k=3, filter={"unit_name": routine.upper()})
-        )
-        # D-prefix callers
-        entity_results.extend(
-            query_vectors(embedding, top_k=top_k, filter={"calls": routine.upper(), "precision": "double"})
-        )
-        # All-precision callers
-        entity_results.extend(
-            query_vectors(embedding, top_k=top_k, filter={"calls": routine.upper()})
-        )
+    # Skip legacy filtering when the query explicitly asks about v1/legacy code
+    _wants_legacy = use_python_strategy and _query_wants_legacy(question)
+
+    if use_python_strategy:
+        entities = _extract_python_entities(question)
+        entity_results: list[dict] = []
+
+        def _py_entity_filter(base_filter: dict) -> dict:
+            if _wants_legacy:
+                return base_filter
+            return {**base_filter, "module_tier": {"$ne": "legacy"}}
+
+        for cls in entities.get("classes", []):
+            entity_results.extend(
+                query_vectors(embedding, top_k=top_k, filter=_py_entity_filter({"unit_name": cls}), **ns)
+            )
+            # Find classes that inherit from the queried class
+            entity_results.extend(
+                query_vectors(embedding, top_k=top_k, filter=_py_entity_filter({"base_classes": cls}), **ns)
+            )
+        for func in entities.get("functions", []):
+            entity_results.extend(
+                query_vectors(embedding, top_k=top_k, filter=_py_entity_filter({"unit_name": func}), **ns)
+            )
+            entity_results.extend(
+                query_vectors(embedding, top_k=top_k, filter=_py_entity_filter({"calls": func}), **ns)
+            )
+        for mod in entities.get("modules", []):
+            entity_results.extend(
+                query_vectors(embedding, top_k=top_k, filter=_py_entity_filter({"uses": mod.split(".")[0]}), **ns)
+            )
+
+        # Decorator-aware queries: when query contains a concept keyword
+        q_lower = question.lower()
+        for concept, decorator_names in _DECORATOR_CONCEPTS.items():
+            if concept in q_lower:
+                for dec_name in decorator_names:
+                    entity_results.extend(
+                        query_vectors(embedding, top_k=top_k, filter=_py_entity_filter({"decorators": dec_name}), **ns)
+                    )
+    elif use_fortran_strategy:
+        entities = _extract_fortran_entities(question)
+        entity_results = []
+
+        for param in entities.get("parameters", []):
+            entity_results.extend(
+                query_vectors(embedding, top_k=top_k, filter={"parameters": param, "precision": "double"}, **ns)
+            )
+            entity_results.extend(
+                query_vectors(embedding, top_k=top_k, filter={"parameters": param}, **ns)
+            )
+        for routine in entities.get("routines", []):
+            entity_results.extend(
+                query_vectors(embedding, top_k=3, filter={"unit_name": routine.upper()}, **ns)
+            )
+            entity_results.extend(
+                query_vectors(embedding, top_k=top_k, filter={"calls": routine.upper(), "precision": "double"}, **ns)
+            )
+            entity_results.extend(
+                query_vectors(embedding, top_k=top_k, filter={"calls": routine.upper()}, **ns)
+            )
+    else:
+        entity_results = []
 
     # Tag, deduplicate, sort by role, rerank, then diversify entity results
-    # Order matters: rerank first (relevance ordering), then diversify last
-    # (D-prefix preference). This prevents the reranker from undoing
-    # diversification's precision-variant deduplication.
     for r in entity_results:
         r["_entity_match"] = True
     seen_ids: set[str] = set()
@@ -258,54 +354,86 @@ def retrieve_with_metrics(question: str, top_k: int = 5, pin_unit: str | None = 
     reranked_entity = _rerank_results(question, sorted_entity, top_k * 2)
     diversified_entity = _diversify_results(reranked_entity, top_k)
 
-    # Two-pass retrieval: drivers first, then general
+    # Two-pass retrieval: drivers first (Fortran), then general
     over_fetch = top_k * 3
 
-    # Pass 1: driver-filtered query
-    driver_results = query_vectors(
-        embedding,
-        top_k=top_k,
-        filter={"routine_role": "driver"},
-    )
+    if use_python_strategy and not _wants_legacy:
+        # Pass 1: Prefer current code (exclude legacy)
+        current_results = query_vectors(
+            embedding, top_k=top_k,
+            filter={"module_tier": {"$ne": "legacy"}},
+            **ns,
+        )
+        driver_results = []
+    elif use_python_strategy:
+        current_results = []
+        driver_results = []
+    elif use_fortran_strategy:
+        current_results = []
+        driver_results = query_vectors(
+            embedding, top_k=top_k,
+            filter={"routine_role": "driver"},
+            **ns,
+        )
+    else:
+        current_results = []
+        driver_results = []
 
-    # Pass 2: unfiltered semantic search (over-fetch for diversification)
-    general_results = query_vectors(embedding, top_k=over_fetch)
+    # Pass 2: Unfiltered (catch unique concepts from all tiers)
+    general_results = query_vectors(embedding, top_k=over_fetch, **ns)
 
-    # Merge non-entity results (deduped against entity IDs)
+    # BM25 keyword search backstop
+    keyword_results: list[dict] = []
+    kw_index = KeywordIndex()
+    kw_source = namespace or "default"
+    if kw_index.load(kw_source):
+        kw_hits = kw_index.search(question, top_k=top_k * 2)
+        if kw_hits:
+            kw_ids = [cid for cid, _score in kw_hits]
+            try:
+                fetched = fetch_vectors(kw_ids, namespace=namespace)
+                for cid, kw_score in kw_hits:
+                    vec = fetched.get(cid)
+                    if vec and cid not in seen_ids:
+                        keyword_results.append({
+                            "id": cid,
+                            "score": kw_score,
+                            "metadata": vec.metadata if hasattr(vec, "metadata") else {},
+                            "_keyword_match": True,
+                        })
+            except Exception:
+                pass  # Graceful fallback if fetch fails
+
+    # Merge non-entity results
     non_entity: list[dict] = []
-    for r in driver_results + general_results:
+    for r in current_results + driver_results + general_results + keyword_results:
         if r["id"] not in seen_ids:
             non_entity.append(r)
             seen_ids.add(r["id"])
 
-    # Rerank non-entity results (over-fetch to give final diversification
-    # spare candidates when cross-tier duplicates are collapsed).
     remaining_slots = max(0, top_k - len(diversified_entity))
     if remaining_slots > 0 and non_entity:
         reranked_non_entity = _rerank_results(question, non_entity, remaining_slots * 3)
     else:
         reranked_non_entity = []
 
-    # Final diversification across both tiers to collapse cross-tier
-    # precision variants (e.g., DGETRF from entity tier + SGETRF from
-    # non-entity tier). Non-entity results are not pre-diversified so the
-    # final pass has enough candidates to backfill collapsed slots.
     pre_diversify_count = len(diversified_entity + reranked_non_entity)
     combined = _diversify_results(diversified_entity + reranked_non_entity, top_k)
     metrics.variants_collapsed = pre_diversify_count - len(combined)
 
-    # Filter low-confidence results (entity matches bypass threshold)
     pre_filter = combined
     filtered = [
         r for r in pre_filter
-        if r.get("_entity_match") or r.get("score", 0) >= _MIN_SCORE_THRESHOLD
+        if r.get("_entity_match") or r.get("_keyword_match") or r.get("score", 0) >= _MIN_SCORE_THRESHOLD
     ]
+    # If threshold filtering is too aggressive, keep at least min(top_k, 3) results
+    # so the LLM always has some context to work with
+    min_results = min(top_k, 3)
+    if len(filtered) < min_results and len(pre_filter) >= min_results:
+        filtered = pre_filter[:min_results]
     metrics.threshold_filtered = len(pre_filter) - len(filtered)
-
-    # Count entity matches in final results
     metrics.entity_matches = sum(1 for r in filtered if r.get("_entity_match"))
 
-    # Score distribution from final results
     if filtered:
         scores = [r.get("score", 0) for r in filtered]
         metrics.score_distribution = {
@@ -317,12 +445,18 @@ def retrieve_with_metrics(question: str, top_k: int = 5, pin_unit: str | None = 
     return RetrievalResult(results=filtered, metrics=metrics)
 
 
-def retrieve(question: str, top_k: int = 5, pin_unit: str | None = None) -> list[dict]:
+def retrieve(
+    question: str,
+    top_k: int = 5,
+    pin_unit: str | None = None,
+    namespace: str | None = None,
+    languages: list[str] | None = None,
+) -> list[dict]:
     """Retrieve relevant code chunks for a natural language question.
 
     Thin wrapper around retrieve_with_metrics() that returns only the results list.
     """
-    return retrieve_with_metrics(question, top_k, pin_unit).results
+    return retrieve_with_metrics(question, top_k, pin_unit, namespace=namespace, languages=languages).results
 
 
 def format_results(results: list[dict], show_code: bool = False) -> None:
@@ -377,9 +511,10 @@ def format_results(results: list[dict], show_code: bool = False) -> None:
             if sl and el:
                 snippet = read_source_snippet(file_path, sl, el)
                 if snippet:
+                    lexer = meta.get("language", "text")
                     syntax = Syntax(
                         snippet,
-                        "fortran",
+                        lexer,
                         line_numbers=True,
                         start_line=sl,
                         theme="monokai",

@@ -38,8 +38,8 @@ def test_resolve_not_found(source_tree):
 
 
 def test_resolve_missing_config():
-    """When no base_dir and LAPACK_DATA_DIR is missing, returns None."""
-    with patch("legacylens.rag.source_reader.LAPACK_DATA_DIR", side_effect=RuntimeError):
+    """When no base_dir and CODEBASE_DATA_DIR is missing, returns None."""
+    with patch("legacylens.rag.source_reader.CODEBASE_DATA_DIR", side_effect=RuntimeError):
         result = resolve_source_path("dgesv.f")
     assert result is None
 

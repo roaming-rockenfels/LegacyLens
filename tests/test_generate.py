@@ -52,7 +52,7 @@ def test_build_context_includes_source(mock_snippet):
     assert "SUBROUTINE DGESV" in context
     # Line numbers should be present (start_line=1)
     assert "     1 | " in context
-    mock_snippet.assert_called_once_with("dgesv.f", 1, 178)
+    mock_snippet.assert_called_once_with("dgesv.f", 1, 178, base_dir=None)
 
 
 @patch("legacylens.rag.generate.read_source_snippet", return_value="")

@@ -17,7 +17,7 @@ STATIC_DIR = Path(__file__).parent.parent / "static"
 
 app = FastAPI(
     title="LegacyLens API",
-    description="RAG-powered API for querying legacy Fortran codebases (LAPACK).",
+    description="RAG-powered API for querying legacy codebases.",
     version="0.1.0",
 )
 

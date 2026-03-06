@@ -597,6 +597,79 @@ def test_retrieve_no_entities_no_extra_calls(mock_embed, mock_query, mock_rerank
     assert mock_query.call_count == 2
 
 
+# --- Tests for _extract_python_entities ---
+
+def test_extract_python_entities_snake_case():
+    from legacylens.rag.retrieve import _extract_python_entities
+
+    result = _extract_python_entities("how does load_config work?")
+    assert "load_config" in result["functions"]
+
+
+def test_extract_python_entities_camel_case():
+    from legacylens.rag.retrieve import _extract_python_entities
+
+    result = _extract_python_entities("what does MyClass do?")
+    assert "MyClass" in result["classes"]
+
+
+def test_extract_python_entities_dotted_path():
+    from legacylens.rag.retrieve import _extract_python_entities
+
+    result = _extract_python_entities("how is os.path.join used?")
+    assert "os.path.join" in result["modules"]
+
+
+def test_extract_python_entities_filters_stopwords():
+    from legacylens.rag.retrieve import _extract_python_entities
+
+    result = _extract_python_entities("what does this class method return?")
+    assert "class" not in result["functions"]
+    assert "method" not in result["functions"]
+    assert "return" not in result["functions"]
+
+
+def test_extract_python_entities_mixed():
+    from legacylens.rag.retrieve import _extract_python_entities
+
+    result = _extract_python_entities("does DatabaseManager use save_record?")
+    assert "DatabaseManager" in result["classes"]
+    assert "save_record" in result["functions"]
+
+
+# --- Tests for language-aware diversification ---
+
+def test_diversify_python_no_dedup():
+    """Python chunks should not be deduplicated by SDCZ prefix."""
+    from legacylens.rag.retrieve import _diversify_results
+
+    results = [
+        {"id": "1", "score": 0.9, "metadata": {"unit_name": "save_data", "language": "python"}},
+        {"id": "2", "score": 0.8, "metadata": {"unit_name": "send_email", "language": "python"}},
+        {"id": "3", "score": 0.7, "metadata": {"unit_name": "sort_items", "language": "python"}},
+    ]
+    diversified = _diversify_results(results, top_k=5)
+    # All 3 should survive — no SDCZ dedup for Python
+    assert len(diversified) == 3
+
+
+def test_diversify_mixed_languages():
+    """Fortran dedup should only apply to Fortran, not Python chunks."""
+    from legacylens.rag.retrieve import _diversify_results
+
+    results = [
+        {"id": "1", "score": 0.9, "metadata": {"unit_name": "DGESV", "language": "fortran"}},
+        {"id": "2", "score": 0.8, "metadata": {"unit_name": "SGESV", "language": "fortran"}},
+        {"id": "3", "score": 0.7, "metadata": {"unit_name": "save_data", "language": "python"}},
+    ]
+    diversified = _diversify_results(results, top_k=5)
+    names = [r["metadata"]["unit_name"] for r in diversified]
+    # DGESV replaces SGESV (Fortran dedup), save_data stays
+    assert "DGESV" in names
+    assert "save_data" in names
+    assert "SGESV" not in names
+
+
 def test_format_results_no_crash(capsys):
     """format_results should not crash on empty or populated results."""
     from legacylens.rag.retrieve import format_results
@@ -633,3 +706,227 @@ def test_format_results_show_code_false(capsys):
     with patch("legacylens.rag.source_reader.read_source_snippet") as mock_snippet:
         format_results(MOCK_RESULTS, show_code=False)
         mock_snippet.assert_not_called()
+
+
+# --- Tests for classify_module_tier ---
+
+def test_classify_module_tier():
+    from legacylens.chunkers.base import classify_module_tier
+
+    assert classify_module_tier("v1/fields.py") == "legacy"
+    assert classify_module_tier("pydantic/v1/validators.py") == "legacy"
+    assert classify_module_tier("deprecated/old_api.py") == "deprecated"
+    assert classify_module_tier("src/deprecated/compat.py") == "deprecated"
+    assert classify_module_tier("_internal/core.py") == "internal"
+    assert classify_module_tier("pydantic/_internal/fields.py") == "internal"
+    assert classify_module_tier("main.py") == "current"
+    assert classify_module_tier("src/models/user.py") == "current"
+    # Windows path separators
+    assert classify_module_tier("pydantic\\v1\\fields.py") == "legacy"
+
+
+# --- Tests for tier-aware diversification ---
+
+def test_diversify_python_tier_dedup():
+    """Same-named Python unit across tiers should collapse to current."""
+    from legacylens.rag.retrieve import _diversify_results
+
+    results = [
+        {"id": "1", "score": 0.9, "metadata": {"unit_name": "FieldInfo", "language": "python", "module_tier": "legacy"}},
+        {"id": "2", "score": 0.8, "metadata": {"unit_name": "FieldInfo", "language": "python", "module_tier": "current"}},
+        {"id": "3", "score": 0.7, "metadata": {"unit_name": "BaseModel", "language": "python", "module_tier": "current"}},
+    ]
+    diversified = _diversify_results(results, top_k=5)
+    names = [r["metadata"]["unit_name"] for r in diversified]
+    assert len(diversified) == 2
+    # Current FieldInfo should win over legacy
+    field_info = [r for r in diversified if r["metadata"]["unit_name"] == "FieldInfo"][0]
+    assert field_info["metadata"]["module_tier"] == "current"
+    assert "BaseModel" in names
+
+
+def test_diversify_python_unique_legacy_survives():
+    """Legacy unit with no current counterpart should survive."""
+    from legacylens.rag.retrieve import _diversify_results
+
+    results = [
+        {"id": "1", "score": 0.9, "metadata": {"unit_name": "FieldInfo", "language": "python", "module_tier": "current"}},
+        {"id": "2", "score": 0.8, "metadata": {"unit_name": "V1Validator", "language": "python", "module_tier": "legacy"}},
+    ]
+    diversified = _diversify_results(results, top_k=5)
+    names = [r["metadata"]["unit_name"] for r in diversified]
+    assert "FieldInfo" in names
+    assert "V1Validator" in names
+
+
+# --- Tests for Python two-pass retrieval ---
+
+@patch("legacylens.rag.retrieve._rerank_results", side_effect=lambda q, r, k: r[:k])
+@patch("legacylens.rag.retrieve.query_vectors", return_value=[])
+@patch("legacylens.rag.retrieve.embed_query", return_value=[0.1] * 1024)
+def test_retrieve_python_two_pass(mock_embed, mock_query, mock_rerank):
+    """Python strategy should include a current-first filtered query."""
+    from legacylens.rag.retrieve import retrieve
+
+    # Use return_value=[] for all calls; we just verify the filter patterns
+    retrieve("How does it work?", top_k=5, languages=["python"])
+
+    # Find the call with module_tier filter (current-first pass)
+    tier_filter_calls = [
+        c for c in mock_query.call_args_list
+        if c.kwargs.get("filter") == {"module_tier": {"$ne": "legacy"}}
+    ]
+    assert len(tier_filter_calls) == 1, "Should have one current-first filtered query"
+
+    # Find the unfiltered call (general pass with over-fetch)
+    unfiltered_calls = [
+        c for c in mock_query.call_args_list
+        if "filter" not in c.kwargs and c.kwargs.get("top_k") == 15
+    ]
+    assert len(unfiltered_calls) == 1, "Should have one unfiltered over-fetch query"
+
+    # Entity queries should also have the tier filter
+    entity_calls = [
+        c for c in mock_query.call_args_list
+        if c.kwargs.get("filter") and "module_tier" in c.kwargs["filter"]
+        and c.kwargs.get("top_k") != 15  # exclude the current-first pass
+    ]
+    # All entity queries should include the tier filter
+    assert len(entity_calls) >= 1, "Entity queries should include module_tier filter"
+
+
+# --- Tests for _query_wants_legacy ---
+
+def test_query_wants_legacy_true():
+    from legacylens.rag.retrieve import _query_wants_legacy
+
+    assert _query_wants_legacy("How do I migrate v1 validators to v2?")
+    assert _query_wants_legacy("What does the legacy compat layer do?")
+    assert _query_wants_legacy("How to upgrade from v1?")
+    assert _query_wants_legacy("differences in the old api")
+
+
+def test_query_wants_legacy_false():
+    from legacylens.rag.retrieve import _query_wants_legacy
+
+    assert not _query_wants_legacy("How does Pydantic validate field types?")
+    assert not _query_wants_legacy("What does BaseModel.__init__ do?")
+
+
+@patch("legacylens.rag.retrieve._rerank_results", side_effect=lambda q, r, k: r[:k])
+@patch("legacylens.rag.retrieve.query_vectors", return_value=[])
+@patch("legacylens.rag.retrieve.embed_query", return_value=[0.1] * 1024)
+def test_retrieve_python_legacy_query_skips_filter(mock_embed, mock_query, mock_rerank):
+    """When query mentions v1/legacy, tier filter should be skipped."""
+    from legacylens.rag.retrieve import retrieve
+
+    retrieve("How do I migrate from v1?", top_k=5, languages=["python"])
+
+    # No call should have the module_tier filter
+    tier_filter_calls = [
+        c for c in mock_query.call_args_list
+        if c.kwargs.get("filter") and "module_tier" in c.kwargs.get("filter", {})
+    ]
+    assert len(tier_filter_calls) == 0, "Legacy-intent query should skip tier filter"
+
+
+# --- Tests for base_class filtered queries ---
+
+@patch("legacylens.rag.retrieve._rerank_results", side_effect=lambda q, r, k: r[:k])
+@patch("legacylens.rag.retrieve.query_vectors", return_value=[])
+@patch("legacylens.rag.retrieve.embed_query", return_value=[0.1] * 1024)
+def test_retrieve_python_base_class_filter(mock_embed, mock_query, mock_rerank):
+    """When a CamelCase class name is found, should also query by base_classes."""
+    from legacylens.rag.retrieve import retrieve
+
+    retrieve("How does BaseModel validate?", top_k=5, languages=["python"])
+
+    # Should have a query filtering by base_classes=BaseModel
+    base_class_calls = [
+        c for c in mock_query.call_args_list
+        if c.kwargs.get("filter") and "base_classes" in c.kwargs.get("filter", {})
+    ]
+    assert len(base_class_calls) >= 1, "Should query by base_classes for CamelCase entity"
+    assert base_class_calls[0].kwargs["filter"]["base_classes"] == "BaseModel"
+
+
+# --- Tests for decorator-aware queries ---
+
+@patch("legacylens.rag.retrieve._rerank_results", side_effect=lambda q, r, k: r[:k])
+@patch("legacylens.rag.retrieve.query_vectors", return_value=[])
+@patch("legacylens.rag.retrieve.embed_query", return_value=[0.1] * 1024)
+def test_retrieve_python_decorator_concept(mock_embed, mock_query, mock_rerank):
+    """Query containing 'validate' without identifiers should trigger decorator queries."""
+    from legacylens.rag.retrieve import retrieve
+
+    retrieve("how do i validate field types?", top_k=5, languages=["python"])
+
+    # Should have decorator-filtered queries for validation decorators
+    decorator_calls = [
+        c for c in mock_query.call_args_list
+        if c.kwargs.get("filter") and "decorators" in c.kwargs.get("filter", {})
+    ]
+    assert len(decorator_calls) >= 1, "Should query by decorators for concept keyword"
+    decorator_names = [c.kwargs["filter"]["decorators"] for c in decorator_calls]
+    assert "field_validator" in decorator_names or "validator" in decorator_names
+
+
+# --- Tests for enhanced rerank document ---
+
+@patch("legacylens.rag.retrieve._get_voyage_client")
+def test_rerank_includes_base_classes(mock_client_fn):
+    """Rerank document should include base_classes and decorators."""
+    from legacylens.rag.retrieve import _rerank_results
+
+    results = [
+        {
+            "id": "1",
+            "score": 0.9,
+            "metadata": {
+                "unit_name": "MyModel",
+                "unit_type": "class",
+                "purpose": "A model",
+                "base_classes": ["BaseModel"],
+                "decorators": ["dataclass"],
+            },
+        },
+    ]
+
+    mock_client = MagicMock()
+    mock_client_fn.return_value = mock_client
+    mock_rr = MagicMock(index=0)
+    mock_rerank_result = MagicMock()
+    mock_rerank_result.results = [mock_rr]
+    mock_client.rerank.return_value = mock_rerank_result
+
+    _rerank_results("model", results, top_k=1)
+
+    # Check that the document passed to rerank includes structural info
+    call_args = mock_client.rerank.call_args
+    documents = call_args[0][1]
+    assert "inherits BaseModel" in documents[0]
+    assert "@dataclass" in documents[0]
+
+
+# --- Tests for keyword match threshold bypass ---
+
+@patch("legacylens.rag.retrieve._rerank_results", side_effect=lambda q, r, k: r[:k])
+@patch("legacylens.rag.retrieve.query_vectors")
+@patch("legacylens.rag.retrieve.embed_query", return_value=[0.1] * 1024)
+def test_keyword_match_bypasses_threshold(mock_embed, mock_query, mock_rerank):
+    """Keyword-matched results should survive score threshold filtering."""
+    from legacylens.rag.retrieve import retrieve_with_metrics
+
+    driver_results = []
+    general_results = [
+        {"id": "1", "score": 0.60, "metadata": {"unit_name": "DGESV"}},
+        {"id": "2", "score": 0.30, "metadata": {"unit_name": "DGEEV"}, "_keyword_match": True},
+    ]
+
+    mock_query.side_effect = [driver_results, general_results]
+
+    result = retrieve_with_metrics("eigenvalues", top_k=5)
+
+    # keyword_match result should survive despite low score
+    ids = [r["id"] for r in result.results]
+    assert "2" in ids

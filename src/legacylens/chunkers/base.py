@@ -25,6 +25,12 @@ class ChunkMetadata:
     precision: str | None = None  # fortran: "single" | "double" | "complex" | "double_complex"
     category: str | None = None
     routine_role: str | None = None  # "driver" | "computational" | "auxiliary" | "blas"
+    module_tier: str = "current"  # "current" | "legacy" | "deprecated" | "internal"
+    base_classes: list[str] = field(default_factory=list)
+    decorators: list[str] = field(default_factory=list)
+    return_type: str = ""
+    visibility: str = "public"  # "public" | "private" | "protected" | "dunder"
+    dunder_methods: list[str] = field(default_factory=list)
     chunk_index: int | None = None
     chunk_total: int | None = None
 
@@ -53,10 +59,44 @@ class ChunkMetadata:
             meta["category"] = self.category
         if self.routine_role:
             meta["routine_role"] = self.routine_role
+        meta["module_tier"] = self.module_tier
+        if self.base_classes:
+            meta["base_classes"] = self.base_classes
+        if self.decorators:
+            meta["decorators"] = self.decorators
+        if self.return_type:
+            meta["return_type"] = self.return_type
+        if self.visibility != "public":
+            meta["visibility"] = self.visibility
+        if self.dunder_methods:
+            meta["dunder_methods"] = self.dunder_methods
         if self.chunk_index is not None:
             meta["chunk_index"] = self.chunk_index
             meta["chunk_total"] = self.chunk_total
         return meta
+
+
+def classify_visibility(name: str) -> str:
+    """Classify a Python identifier's visibility from its name."""
+    if name.startswith("__") and name.endswith("__"):
+        return "dunder"
+    if name.startswith("__"):
+        return "private"
+    if name.startswith("_"):
+        return "protected"
+    return "public"
+
+
+def classify_module_tier(file_path: str) -> str:
+    """Classify a file's module tier from its path."""
+    fp = file_path.replace("\\", "/")
+    if fp.startswith("v1/") or "/v1/" in fp:
+        return "legacy"
+    if fp.startswith("deprecated/") or "/deprecated/" in fp:
+        return "deprecated"
+    if fp.startswith("_internal/") or "/_internal/" in fp:
+        return "internal"
+    return "current"
 
 
 @dataclass
@@ -131,3 +171,24 @@ class ChunkerRegistry:
 
     def supported_extensions(self) -> list[str]:
         return list(self._chunkers.keys())
+
+    def chunk_directory(self, directory: str) -> list[Chunk]:
+        """Walk a directory and dispatch each file to the correct chunker by extension."""
+        chunks: list[Chunk] = []
+        root = Path(directory)
+        extensions = set(self.supported_extensions())
+
+        for path in sorted(root.rglob("*")):
+            if path.is_file() and path.suffix.lower() in extensions:
+                chunker = self._chunkers.get(path.suffix.lower())
+                if chunker is None:
+                    continue
+                try:
+                    content = path.read_text(encoding="utf-8", errors="replace")
+                    rel_path = str(path.relative_to(root))
+                    file_chunks = chunker.chunk_file(rel_path, content)
+                    chunks.extend(file_chunks)
+                except Exception as e:
+                    print(f"Warning: failed to chunk {path}: {e}")
+
+        return chunks

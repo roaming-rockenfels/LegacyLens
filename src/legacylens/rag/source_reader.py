@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from legacylens.config import LAPACK_DATA_DIR
+from legacylens.config import LAPACK_DATA_DIR, CODEBASE_DATA_DIR
 
 
 def resolve_source_path(file_path: str, base_dir: Path | None = None) -> Path | None:
@@ -14,7 +14,7 @@ def resolve_source_path(file_path: str, base_dir: Path | None = None) -> Path | 
     Returns None if the file cannot be found.
     """
     try:
-        base = base_dir or LAPACK_DATA_DIR()
+        base = base_dir or CODEBASE_DATA_DIR()
     except Exception:
         return None
 

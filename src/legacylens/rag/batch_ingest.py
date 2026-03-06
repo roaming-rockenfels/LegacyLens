@@ -20,8 +20,9 @@ import httpx
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
 
-from legacylens.chunkers.fortran import FortranChunker
 from legacylens.chunkers.base import Chunk
+from legacylens.rag.ingest import create_default_registry
+from legacylens.rag.keyword_index import KeywordIndex
 from legacylens.config import VOYAGE_API_KEY
 from legacylens.rag.embeddings import MODEL, DIMENSION
 from legacylens.rag.storage import upsert_vectors, get_index_stats, delete_index
@@ -42,7 +43,7 @@ def _headers() -> dict:
     }
 
 
-def batch_ingest_directory(directory: str, reset_index: bool = True) -> dict:
+def batch_ingest_directory(directory: str, reset_index: bool = True, namespace: str | None = None) -> dict:
     """Ingest a codebase directory using the Voyage Batch API.
 
     Returns:
@@ -52,8 +53,8 @@ def batch_ingest_directory(directory: str, reset_index: bool = True) -> dict:
 
     # Step 1: Chunk
     console.print(f"\n[bold blue]Step 1/6:[/] Chunking files in {directory}...")
-    chunker = FortranChunker()
-    chunks = chunker.chunk_directory(directory)
+    registry = create_default_registry()
+    chunks = registry.chunk_directory(directory)
     chunk_time = time.time() - start_time
     console.print(f"  Found [green]{len(chunks)}[/] chunks in {chunk_time:.1f}s")
 
@@ -200,9 +201,15 @@ def batch_ingest_directory(directory: str, reset_index: bool = True) -> dict:
     console.print(f"  Parsed {len(all_vectors)} embeddings")
 
     store_start = time.time()
-    stored = upsert_vectors(all_vectors)
+    stored = upsert_vectors(all_vectors, namespace=namespace)
     store_time = time.time() - store_start
     console.print(f"  Upserted [green]{stored}[/] vectors in {store_time:.1f}s")
+
+    # Build BM25 keyword index
+    kw_index = KeywordIndex()
+    kw_index.build(chunks)
+    kw_index.save(namespace or "default")
+    console.print(f"  Built keyword index for [green]{namespace or 'default'}[/]")
 
     total_time = time.time() - start_time
     stats = get_index_stats()

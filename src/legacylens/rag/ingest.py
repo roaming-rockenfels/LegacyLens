@@ -7,9 +7,10 @@ import time
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
 
-from legacylens.chunkers import FortranChunker, ChunkerRegistry
+from legacylens.chunkers import FortranChunker, PythonChunker, ChunkerRegistry
 from legacylens.chunkers.base import Chunk
 from legacylens.rag.embeddings import embed_texts
+from legacylens.rag.keyword_index import KeywordIndex
 from legacylens.rag.storage import upsert_vectors, get_index_stats
 
 console = Console()
@@ -25,11 +26,16 @@ def create_default_registry() -> ChunkerRegistry:
     """Create a registry with all available chunkers."""
     registry = ChunkerRegistry()
     registry.register(FortranChunker())
+    registry.register(PythonChunker())
     return registry
 
 
-def ingest_directory(directory: str) -> dict:
+def ingest_directory(directory: str, namespace: str | None = None) -> dict:
     """Ingest a codebase directory into Pinecone.
+
+    Args:
+        directory: Path to codebase directory.
+        namespace: Pinecone namespace for source isolation.
 
     Returns:
         Stats dict with counts and timings.
@@ -39,8 +45,7 @@ def ingest_directory(directory: str) -> dict:
     # Step 1: Chunk
     console.print(f"\n[bold blue]Step 1/3:[/] Chunking files in {directory}...")
     registry = create_default_registry()
-    chunker = FortranChunker()
-    chunks = chunker.chunk_directory(directory)
+    chunks = registry.chunk_directory(directory)
     chunk_time = time.time() - start_time
     console.print(f"  Found [green]{len(chunks)}[/] chunks in {chunk_time:.1f}s")
 
@@ -80,9 +85,15 @@ def ingest_directory(directory: str) -> dict:
     # Step 3: Store
     console.print(f"\n[bold blue]Step 3/3:[/] Upserting to Pinecone...")
     store_start = time.time()
-    stored = upsert_vectors(all_vectors)
+    stored = upsert_vectors(all_vectors, namespace=namespace)
     store_time = time.time() - store_start
     console.print(f"  Upserted [green]{stored}[/] vectors in {store_time:.1f}s")
+
+    # Build BM25 keyword index
+    kw_index = KeywordIndex()
+    kw_index.build(chunks)
+    kw_index.save(namespace or "default")
+    console.print(f"  Built keyword index for [green]{namespace or 'default'}[/]")
 
     total_time = time.time() - start_time
     stats = get_index_stats()

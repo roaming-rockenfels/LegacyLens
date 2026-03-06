@@ -22,7 +22,7 @@ _SEARCH_CODEBASE_TOOL = {
     "function": {
         "name": "search_codebase",
         "description": (
-            "Search the LAPACK Fortran codebase for relevant code chunks. "
+            "Search the codebase for relevant code chunks. "
             "Call this tool when you need additional context from the codebase to "
             "answer the user's question — for example, when the question asks about "
             "a new routine, concept, or topic not covered by the existing conversation "
@@ -186,14 +186,14 @@ class ChatSession:
         """Build user message content, conditional on whether context is empty."""
         if context:
             return (
-                f"Here are relevant code chunks from the LAPACK Fortran codebase:\n\n"
+                f"Here are relevant code chunks from the codebase:\n\n"
                 f"{context}\n\n"
                 f"Question: {question}\n\n"
                 f"Provide a clear explanation of what this code does, how it works, and why."
             )
         return (
             f"No code chunks were found in the codebase for this query. "
-            f"Answer using your expertise in LAPACK and Fortran, and cite authoritative web sources.\n\n"
+            f"Answer using your expertise and cite authoritative web sources.\n\n"
             f"Question: {question}\n\n"
             f"Provide a clear explanation."
         )
