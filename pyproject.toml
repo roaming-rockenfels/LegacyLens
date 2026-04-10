@@ -32,7 +32,7 @@ legacylens = "legacylens.cli.main:app"
 where = ["src"]
 
 [tool.setuptools.package-data]
-legacylens = ["static/*.html"]
+legacylens = ["static/*.html", "static/*.svg"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

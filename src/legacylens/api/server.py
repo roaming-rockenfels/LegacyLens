@@ -11,6 +11,7 @@ from typing import Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 STATIC_DIR = Path(__file__).parent.parent / "static"
@@ -88,6 +89,9 @@ class ChatResponse(BaseModel):
 class StatsResponse(BaseModel):
     total_vector_count: int
     dimension: int
+
+
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)

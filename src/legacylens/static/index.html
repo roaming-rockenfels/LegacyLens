@@ -2,6 +2,7 @@
 <html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta content="width=device-width, initial-scale=1.0" name="viewport">
 <title>LegacyLens Weathered Terminal</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <script src="https://cdn.tailwindcss.com/?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Space+Mono:wght@400;700&family=VT323&family=Bungee&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
@@ -78,6 +79,56 @@ body {
     font-family: "VT323", monospace;
     color: var(--phosphor-green);
     text-shadow: 0 0 8px rgba(51, 255, 51, 0.8), 0 0 2px rgba(255, 255, 255, 0.5)
+}
+.flag-tooltip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1px solid rgba(51, 255, 51, 0.4);
+    font-size: 10px;
+    cursor: help;
+    opacity: 1;
+    vertical-align: middle;
+    z-index: 200;
+}
+.flag-tooltip::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 0;
+    background: #000;
+    color: var(--phosphor-green);
+    font-family: "VT323", monospace;
+    font-size: 14px;
+    text-transform: none;
+    letter-spacing: normal;
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid rgba(51, 255, 51, 0.3);
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 200;
+    text-shadow: none;
+    box-shadow: 0 0 0 4px #000;
+}
+.flag-group {
+    z-index: 1;
+}
+.flag-group:hover {
+    z-index: 200;
+}
+.flag-tooltip-right::after {
+    left: auto;
+    right: 0;
+}
+.flag-tooltip:hover::after {
+    opacity: 1;
 }
 .crt-panel {
     background: var(--crt-bg);
@@ -348,16 +399,17 @@ body {
     <!-- Query Flags — icon, input/toggle, label stacked vertically -->
     <div class="mt-2 flex-shrink-0 distressed-border rounded px-3 py-2 flex items-start justify-between" style="overflow: visible;">
         <!-- --top-k -->
-        <span class="phosphor-glow relative z-10 flex flex-col items-center gap-1.5">
+        <span class="phosphor-glow relative flex flex-col items-center gap-1.5 flag-group">
             <span class="flex items-center gap-3">
                 <span class="material-symbols-outlined text-[var(--phosphor-green)] text-xl">filter_list</span>
                 <input id="flag-top-k" type="number" min="1" max="20" value="5" class="w-10 bg-black/80 border border-[var(--phosphor-green)]/30 rounded px-1 py-0.5 text-center font-mono text-[15px] phosphor-glow focus:ring-0 focus:border-[var(--phosphor-green)]/60">
             </span>
             <span class="flag-label-full text-[15px] uppercase tracking-wider opacity-50">--top-k</span>
+            <span class="flag-tooltip" data-tooltip="Number of source chunks to retrieve (1–20)">?</span>
         </span>
         <span class="opacity-20 text-[var(--phosphor-green)] mt-3">|</span>
         <!-- --no-answer -->
-        <span id="toggle-no-answer" class="relative z-10 flex flex-col items-center gap-1.5 cursor-pointer phosphor-glow">
+        <span id="toggle-no-answer" class="relative flex flex-col items-center gap-1.5 cursor-pointer phosphor-glow flag-group">
             <span class="flex items-center gap-3">
                 <span class="material-symbols-outlined text-[var(--phosphor-green)] text-xl">speed</span>
                 <div class="w-10 h-5 rounded-full relative flex-shrink-0" style="background: #1a1c1d; border: 1px solid #3d3f41;">
@@ -365,10 +417,11 @@ body {
                 </div>
             </span>
             <span class="flag-label-full text-[15px] uppercase tracking-wider opacity-50">--no-answer</span>
+            <span class="flag-tooltip" data-tooltip="Skip the LLM answer, return raw chunks only">?</span>
         </span>
         <span class="opacity-20 text-[var(--phosphor-green)] mt-3">|</span>
         <!-- --show-code -->
-        <span id="toggle-show-code" class="relative z-10 flex flex-col items-center gap-1.5 cursor-pointer phosphor-glow">
+        <span id="toggle-show-code" class="relative flex flex-col items-center gap-1.5 cursor-pointer phosphor-glow flag-group">
             <span class="flex items-center gap-3">
                 <span class="material-symbols-outlined text-[var(--phosphor-green)] text-xl">code</span>
                 <div class="w-10 h-5 rounded-full relative flex-shrink-0" style="background: #1a1c1d; border: 1px solid #3d3f41;">
@@ -376,6 +429,7 @@ body {
                 </div>
             </span>
             <span class="flag-label-full text-[15px] uppercase tracking-wider opacity-50">--show-code</span>
+            <span class="flag-tooltip flag-tooltip-right" data-tooltip="Include source code snippets in results">?</span>
         </span>
     </div>
 </aside>
